@@ -1,0 +1,3 @@
+alaya.01z.io {
+	reverse_proxy localhost:4002
+}

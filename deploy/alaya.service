@@ -1,0 +1,16 @@
+[Unit]
+Description=alaya
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=www-data
+WorkingDirectory=/var/www/alaya
+ExecStart=/var/www/alaya/target/release/alaya --serve --port 4002 --database /var/www/alaya/alaya.db
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Git post-merge hook
+# Runs after a successful merge/pull
+
+echo "Post-merge hook: Starting cargo build --release..."
+
+# Get the root directory of the git repository
+GIT_ROOT=$(git rev-parse --show-toplevel)
+
+# Change to the git root directory
+cd "$GIT_ROOT" || exit 1
+
+# Check if Cargo.toml exists
+if [ ! -f "Cargo.toml" ]; then
+    echo "Warning: Cargo.toml not found in repository root. Skipping build."
+    exit 0
+fi
+
+# Run cargo build in release mode
+if cargo build --release; then
+    echo "Post-merge hook: Build completed successfully!"
+
+    # Restart the alaya service
+    echo "Post-merge hook: Restarting alaya service..."
+    if sudo systemctl restart alaya; then
+        echo "Post-merge hook: Service restarted successfully!"
+    else
+        echo "Post-merge hook: Failed to restart service!"
+        exit 1
+    fi
+else
+    echo "Post-merge hook: Build failed!"
+    exit 1
+fi
