@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+
+{% block title %}Add New Book - ālaya{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Add New Book</h1>
+        <p>Enter the details of your book</p>
+    </div>
+
+    {% if let Some(message) = error_message %}
+    <div class="error-message" style="display: block;">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/new" class="auth-form">
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                value="{{ form_title }}"
+                required
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="author">Author</label>
+            <input
+                type="text"
+                id="author"
+                name="author"
+                value="{{ form_author }}"
+                required
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="isbn">ISBN</label>
+            <input
+                type="text"
+                id="isbn"
+                name="isbn"
+                value="{{ form_isbn }}"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="publication_year">Publication Year</label>
+            <input
+                type="number"
+                id="publication_year"
+                name="publication_year"
+                value="{{ form_publication_year }}"
+                min="1000"
+                max="9999"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea
+                id="notes"
+                name="notes"
+                rows="4"
+                autocomplete="off"
+            >{{ form_notes }}</textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Add Book</button>
+    </form>
+</div>
+{% endblock %}

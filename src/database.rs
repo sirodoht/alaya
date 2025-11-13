@@ -275,4 +275,33 @@ impl Database {
 
         Ok(())
     }
+
+    // Book-related database methods
+    pub async fn create_book(
+        &self,
+        title: &str,
+        author: &str,
+        isbn: Option<&str>,
+        publication_year: Option<i32>,
+        notes: Option<&str>,
+    ) -> Result<String, DynError> {
+        let book_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            "INSERT INTO books (id, title, author, isbn, publication_year, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(&book_id)
+        .bind(title)
+        .bind(author)
+        .bind(isbn)
+        .bind(publication_year)
+        .bind(notes)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(book_id)
+    }
 }

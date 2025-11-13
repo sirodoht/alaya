@@ -40,6 +40,19 @@ pub struct SignupTemplate {
     pub error_message: Option<String>,
 }
 
+#[derive(Template)]
+#[template(path = "new_book.html")]
+pub struct NewBookTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub form_title: String,
+    pub form_author: String,
+    pub form_isbn: String,
+    pub form_publication_year: String,
+    pub form_notes: String,
+    pub error_message: Option<String>,
+}
+
 // User-related structures for API
 #[derive(sqlx::FromRow, Serialize)]
 pub struct User {
@@ -48,6 +61,19 @@ pub struct User {
     #[serde(skip)] // Never serialize password hash
     pub password_hash: String,
     pub created_at: String,
+}
+
+// Book-related structures
+#[derive(sqlx::FromRow, Serialize)]
+pub struct Book {
+    pub id: String,
+    pub title: String,
+    pub author: String,
+    pub isbn: Option<String>,
+    pub publication_year: Option<i32>,
+    pub notes: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Deserialize)]
@@ -130,6 +156,15 @@ pub struct SignupForm {
     pub username: String,
     pub password: String,
     pub confirm_password: String,
+}
+
+#[derive(Deserialize)]
+pub struct NewBookForm {
+    pub title: String,
+    pub author: String,
+    pub isbn: Option<String>,
+    pub publication_year: Option<i32>,
+    pub notes: Option<String>,
 }
 
 pub async fn signup_submit(State(db): State<AppState>, Form(form): Form<SignupForm>) -> Response {
@@ -219,6 +254,106 @@ fn render_signup(form_username: String, error_message: Option<String>) -> Respon
     Html(template.render().unwrap()).into_response()
 }
 
+pub async fn new_book_page(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let user = current_user(&db, &headers).await;
+    
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let template = NewBookTemplate {
+        is_authenticated: true,
+        username: user.map(|u| u.username).unwrap_or_default(),
+        form_title: String::new(),
+        form_author: String::new(),
+        form_isbn: String::new(),
+        form_publication_year: String::new(),
+        form_notes: String::new(),
+        error_message: None,
+    };
+
+    Html(template.render().unwrap())
+}
+
+pub async fn new_book_submit(State(db): State<AppState>, headers: HeaderMap, Form(form): Form<NewBookForm>) -> Response {
+    let user = current_user(&db, &headers).await;
+    
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let title = form.title.trim().to_string();
+    let author = form.author.trim().to_string();
+    let isbn = form.isbn.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let publication_year = form.publication_year;
+    let notes = form.notes.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+
+    let username = user.unwrap().username;
+
+    if title.is_empty() {
+        return render_new_book(
+            username.clone(),
+            title,
+            author.clone(),
+            isbn.clone().unwrap_or_default(),
+            publication_year.map(|y| y.to_string()).unwrap_or_default(),
+            notes.clone().unwrap_or_default(),
+            Some("Title cannot be empty".to_string()),
+        );
+    }
+
+    if author.is_empty() {
+        return render_new_book(
+            username.clone(),
+            title.clone(),
+            author,
+            isbn.clone().unwrap_or_default(),
+            publication_year.map(|y| y.to_string()).unwrap_or_default(),
+            notes.clone().unwrap_or_default(),
+            Some("Author cannot be empty".to_string()),
+        );
+    }
+
+    match db.create_book(&title, &author, isbn.as_deref(), publication_year, notes.as_deref()).await {
+        Ok(_) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Book creation error: {error}");
+            render_new_book(
+                username,
+                title,
+                author,
+                isbn.unwrap_or_default(),
+                publication_year.map(|y| y.to_string()).unwrap_or_default(),
+                notes.unwrap_or_default(),
+                Some("Could not create book. Please try again.".to_string()),
+            )
+        }
+    }
+}
+
+fn render_new_book(
+    username: String,
+    form_title: String,
+    form_author: String,
+    form_isbn: String,
+    form_publication_year: String,
+    form_notes: String,
+    error_message: Option<String>,
+) -> Response {
+    let template = NewBookTemplate {
+        is_authenticated: true,
+        username,
+        form_title,
+        form_author,
+        form_isbn,
+        form_publication_year,
+        form_notes,
+        error_message,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
 async fn current_user(db: &Database, headers: &HeaderMap) -> Option<crate::User> {
     let token = extract_session_token(headers)?;
     db.validate_session(&token).await.ok()?
@@ -255,5 +390,6 @@ pub fn create_app(db: AppState) -> Router {
         .route("/login", get(login_page).post(login_submit))
         .route("/signup", get(signup_page).post(signup_submit))
         .route("/logout", post(logout))
+        .route("/new", get(new_book_page).post(new_book_submit))
         .with_state(db)
 }
