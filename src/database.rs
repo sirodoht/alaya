@@ -8,6 +8,8 @@ pub struct Database {
     pub pool: Pool<Sqlite>,
 }
 
+type DynError = Box<dyn std::error::Error + Send + Sync>;
+
 impl Database {
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
         // Create database if it doesn't exist
@@ -138,11 +140,7 @@ impl Database {
         Ok(users)
     }
 
-    pub async fn create_user(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn create_user(&self, username: &str, password: &str) -> Result<String, DynError> {
         // Check if username already exists
         let existing_user = sqlx::query("SELECT id FROM users WHERE username = ?")
             .bind(username)
@@ -179,7 +177,7 @@ impl Database {
         &self,
         username: &str,
         password: &str,
-    ) -> Result<Option<crate::User>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<crate::User>, DynError> {
         let user_row = sqlx::query(
             "SELECT id, username, password_hash, created_at FROM users WHERE username = ?",
         )
@@ -206,7 +204,7 @@ impl Database {
         }
     }
 
-    fn hash_password(&self, password: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn hash_password(&self, password: &str) -> Result<String, DynError> {
         let argon2 = Argon2::default();
         let salt = SaltString::generate(&mut OsRng);
         let password_hash = argon2
@@ -216,11 +214,7 @@ impl Database {
         Ok(password_hash)
     }
 
-    fn verify_password(
-        &self,
-        password: &str,
-        hash: &str,
-    ) -> Result<bool, Box<dyn std::error::Error>> {
+    fn verify_password(&self, password: &str, hash: &str) -> Result<bool, DynError> {
         let argon2 = Argon2::default();
         let parsed_hash =
             PasswordHash::new(hash).map_err(|e| format!("Invalid password hash: {}", e))?;
@@ -231,10 +225,7 @@ impl Database {
     }
 
     // Session management methods
-    pub async fn create_session(
-        &self,
-        user_id: &str,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn create_session(&self, user_id: &str) -> Result<String, DynError> {
         // Generate a simple session token (UUID)
         let token = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
@@ -252,10 +243,7 @@ impl Database {
         Ok(token)
     }
 
-    pub async fn validate_session(
-        &self,
-        token: &str,
-    ) -> Result<Option<crate::User>, Box<dyn std::error::Error>> {
+    pub async fn validate_session(&self, token: &str) -> Result<Option<crate::User>, DynError> {
         let session_row = sqlx::query(
             "SELECT s.user_id, u.username, u.password_hash, u.created_at
              FROM sessions s
@@ -277,5 +265,14 @@ impl Database {
         } else {
             Ok(None)
         }
+    }
+
+    pub async fn delete_session(&self, token: &str) -> Result<(), DynError> {
+        sqlx::query("DELETE FROM sessions WHERE token = ?")
+            .bind(token)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }

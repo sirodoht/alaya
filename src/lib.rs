@@ -1,10 +1,10 @@
 use askama::Template;
 use axum::{
     Router,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::{Html, IntoResponse, Json},
-    routing::get,
+    extract::{Form, State},
+    http::{HeaderMap, HeaderValue, header},
+    response::{Html, IntoResponse, Redirect, Response},
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -17,7 +17,28 @@ pub type AppState = Arc<Database>;
 
 #[derive(Template)]
 #[template(path = "dashboard.html")]
-pub struct DashboardTemplate {}
+pub struct DashboardTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+pub struct LoginTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub form_username: String,
+    pub error_message: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "signup.html")]
+pub struct SignupTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub form_username: String,
+    pub error_message: Option<String>,
+}
 
 // User-related structures for API
 #[derive(sqlx::FromRow, Serialize)]
@@ -30,17 +51,6 @@ pub struct User {
 }
 
 #[derive(Deserialize)]
-pub struct RegisterRequest {
-    /// The username for the new account
-    pub username: String,
-    /// The password for the new account
-    pub password: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct RegisterResponse {}
-
-#[derive(Deserialize)]
 pub struct LoginRequest {
     /// The username to authenticate
     pub username: String,
@@ -48,149 +58,202 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct LoginResponse {
-    /// Authentication token
-    pub token: Option<String>,
-}
+pub async fn dashboard(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let user = current_user(&db, &headers).await;
 
-#[derive(Serialize)]
-pub struct UserInfo {
-    /// Unique user ID
-    pub id: String,
-    /// Username
-    pub username: String,
-    /// Timestamp when the user was created
-    pub created_at: String,
-}
+    let template = DashboardTemplate {
+        is_authenticated: user.is_some(),
+        username: user.map(|u| u.username).unwrap_or_default(),
+    };
 
-#[derive(Serialize, Deserialize)]
-pub struct ErrorResponse {
-    /// Error message describing what went wrong
-    pub error: String,
-}
-
-pub async fn dashboard(State(_db): State<AppState>) -> impl IntoResponse {
-    let template = DashboardTemplate {};
     Html(template.render().unwrap())
 }
 
-// API Handler functions
-pub async fn register_user(
-    State(db): State<AppState>,
-    Json(request): Json<RegisterRequest>,
-) -> Result<Json<RegisterResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Validate input
-    if request.username.trim().is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Username cannot be empty".to_string(),
-            }),
-        ));
+pub async fn login_page(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    if current_user(&db, &headers).await.is_some() {
+        return Redirect::to("/").into_response();
     }
 
-    // Attempt to create user
-    match db.create_user(&request.username, &request.password).await {
-        Ok(_) => Ok(Json(RegisterResponse {})),
-        Err(e) => {
-            if e.to_string().contains("already exists") {
-                Err((
-                    StatusCode::CONFLICT,
-                    Json(ErrorResponse {
-                        error: "Username already exists".to_string(),
-                    }),
-                ))
+    render_login(String::new(), None)
+}
+
+pub async fn login_submit(State(db): State<AppState>, Form(form): Form<LoginRequest>) -> Response {
+    let username = form.username.trim().to_string();
+    let password = form.password;
+
+    if username.is_empty() {
+        return render_login(String::new(), Some("Username cannot be empty".to_string()));
+    }
+
+    if password.is_empty() {
+        return render_login(
+            username.clone(),
+            Some("Password cannot be empty".to_string()),
+        );
+    }
+
+    match db.verify_user(&username, &password).await {
+        Ok(Some(user)) => match db.create_session(&user.id).await {
+            Ok(token) => {
+                let mut response = Redirect::to("/").into_response();
+                if let Some(cookie) = build_session_cookie(&token) {
+                    response.headers_mut().insert(header::SET_COOKIE, cookie);
+                }
+                response
+            }
+            Err(error) => {
+                eprintln!("Session creation error: {error}");
+                render_login(
+                    username,
+                    Some("Could not create session. Please try again.".to_string()),
+                )
+            }
+        },
+        Ok(None) => render_login(username, Some("Invalid username or password".to_string())),
+        Err(error) => {
+            eprintln!("Authentication error: {error}");
+            render_login(username, Some("Authentication failed".to_string()))
+        }
+    }
+}
+
+pub async fn signup_page(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    if current_user(&db, &headers).await.is_some() {
+        return Redirect::to("/").into_response();
+    }
+
+    render_signup(String::new(), None)
+}
+
+#[derive(Deserialize)]
+pub struct SignupForm {
+    pub username: String,
+    pub password: String,
+    pub confirm_password: String,
+}
+
+pub async fn signup_submit(State(db): State<AppState>, Form(form): Form<SignupForm>) -> Response {
+    let username = form.username.trim().to_string();
+    let password = form.password;
+    let confirm_password = form.confirm_password;
+
+    if username.is_empty() {
+        return render_signup(String::new(), Some("Username cannot be empty".to_string()));
+    }
+
+    if password.len() < 8 {
+        return render_signup(
+            username.clone(),
+            Some("Password must be at least 8 characters long".to_string()),
+        );
+    }
+
+    if password != confirm_password {
+        return render_signup(username.clone(), Some("Passwords do not match".to_string()));
+    }
+
+    match db.create_user(&username, &password).await {
+        Ok(user_id) => match db.create_session(&user_id).await {
+            Ok(token) => {
+                let mut response = Redirect::to("/").into_response();
+                if let Some(cookie) = build_session_cookie(&token) {
+                    response.headers_mut().insert(header::SET_COOKIE, cookie);
+                }
+                response
+            }
+            Err(error) => {
+                eprintln!("Session creation error: {error}");
+                render_signup(
+                    username,
+                    Some("Could not create session. Please try again.".to_string()),
+                )
+            }
+        },
+        Err(error) => {
+            if error.to_string().contains("already exists") {
+                render_signup(username, Some("Username already exists".to_string()))
             } else {
-                eprintln!("User registration error: {}", e);
-                Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
-                        error: "Internal server error".to_string(),
-                    }),
-                ))
+                eprintln!("User registration error: {error}");
+                render_signup(
+                    username,
+                    Some("Could not create account. Please try again.".to_string()),
+                )
             }
         }
     }
 }
 
-pub async fn login_user(
-    State(db): State<AppState>,
-    Json(request): Json<LoginRequest>,
-) -> Result<Json<LoginResponse>, (StatusCode, Json<ErrorResponse>)> {
-    // Validate input
-    if request.username.trim().is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Username cannot be empty".to_string(),
-            }),
-        ));
+pub async fn logout(State(db): State<AppState>, headers: HeaderMap) -> Response {
+    if let Some(token) = extract_session_token(&headers)
+        && let Err(error) = db.delete_session(&token).await
+    {
+        eprintln!("Failed to delete session: {error}");
     }
 
-    if request.password.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: "Password cannot be empty".to_string(),
-            }),
-        ));
-    }
-
-    // Authenticate user and create session
-    let user = match db.verify_user(&request.username, &request.password).await {
-        Ok(Some(user)) => user,
-        Ok(None) => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                Json(ErrorResponse {
-                    error: "Invalid username or password".to_string(),
-                }),
-            ));
-        }
-        Err(_) => {
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "Authentication failed".to_string(),
-                }),
-            ));
-        }
-    };
-
-    // Create and store session token in database
-    let token = match db.create_session(&user.id).await {
-        Ok(token) => token,
-        Err(e) => {
-            eprintln!("Session creation error: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: "Could not create session".to_string(),
-                }),
-            ));
-        }
-    };
-
-    Ok(Json(LoginResponse { token: Some(token) }))
+    let mut response = Redirect::to("/login").into_response();
+    response
+        .headers_mut()
+        .insert(header::SET_COOKIE, clear_session_cookie());
+    response
 }
 
-// Helper function to extract token from Authorization header
-pub fn extract_token_from_headers(headers: &HeaderMap) -> Result<String, String> {
-    let auth_header = headers
-        .get("Authorization")
-        .ok_or("Missing Authorization header")?
-        .to_str()
-        .map_err(|_| "Invalid Authorization header")?;
+fn render_login(form_username: String, error_message: Option<String>) -> Response {
+    let template = LoginTemplate {
+        is_authenticated: false,
+        username: String::new(),
+        form_username,
+        error_message,
+    };
 
-    if let Some(token) = auth_header.strip_prefix("Bearer ") {
-        Ok(token.to_string())
-    } else {
-        Err("Invalid Authorization format. Expected 'Bearer <token>'".to_string())
+    Html(template.render().unwrap()).into_response()
+}
+
+fn render_signup(form_username: String, error_message: Option<String>) -> Response {
+    let template = SignupTemplate {
+        is_authenticated: false,
+        username: String::new(),
+        form_username,
+        error_message,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
+async fn current_user(db: &Database, headers: &HeaderMap) -> Option<crate::User> {
+    let token = extract_session_token(headers)?;
+    db.validate_session(&token).await.ok()?
+}
+
+fn extract_session_token(headers: &HeaderMap) -> Option<String> {
+    let cookie_header = headers.get(header::COOKIE)?.to_str().ok()?;
+
+    for cookie in cookie_header.split(';') {
+        let trimmed = cookie.trim();
+        if let Some(rest) = trimmed.strip_prefix("session_token=") {
+            return Some(rest.to_string());
+        }
     }
+
+    None
+}
+
+fn build_session_cookie(token: &str) -> Option<HeaderValue> {
+    HeaderValue::from_str(&format!(
+        "session_token={token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=604800"
+    ))
+    .ok()
+}
+
+fn clear_session_cookie() -> HeaderValue {
+    HeaderValue::from_static("session_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
 }
 
 // App creation function
 pub fn create_app(db: AppState) -> Router {
-    Router::new().route("/", get(dashboard)).with_state(db)
+    Router::new()
+        .route("/", get(dashboard))
+        .route("/login", get(login_page).post(login_submit))
+        .route("/signup", get(signup_page).post(signup_submit))
+        .route("/logout", post(logout))
+        .with_state(db)
 }

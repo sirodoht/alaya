@@ -1,4 +1,21 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div class="welcome-container">
+    {% if is_authenticated %}
+    <h1 class="welcome-title">Welcome back, {{ username }}!</h1>
+    <p class="welcome-message">
+        You're signed in to ālaya. Explore your dashboard and stay connected.
+    </p>
+    {% else %}
+    <h1 class="welcome-title">Welcome to ālaya</h1>
+    <p class="welcome-message">
+        Create an account or sign in to get started.
+    </p>
+    <div class="action-buttons">
+        <a href="/signup" class="btn-primary">Sign Up</a>
+        <a href="/login" class="btn-secondary">Login</a>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
