@@ -1,3 +1,4 @@
+/* Reset */
 * {
     margin: 0;
     padding: 0;
@@ -9,6 +10,7 @@ body {
     line-height: 1.5;
 }
 
+/* Header & Navigation */
 header {
     background-color: #ff8484;
     color: white;
@@ -38,36 +40,26 @@ nav {
     gap: 2rem;
 }
 
-.nav-links a {
+.nav-links a,
+.nav-button {
     color: white;
     text-decoration: none;
     padding: 0.5rem 1rem;
     transition: all 0.1s;
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
 }
 
-.nav-links a:hover {
+.nav-links a:hover,
+.nav-button:hover {
     background-color: white;
     color: #000;
-    border-color: white;
 }
 
 .nav-logout-form {
     display: inline;
-}
-
-.nav-button {
-    background: none;
-    border: none;
-    color: white;
-    padding: 0.5rem 1rem;
-    font: inherit;
-    cursor: pointer;
-    transition: all 0.1s;
-}
-
-.nav-button:hover {
-    background-color: white;
-    color: #000;
 }
 
 .nav-username {
@@ -76,6 +68,7 @@ nav {
     font-weight: 600;
 }
 
+/* Main Content */
 main {
     max-width: 1200px;
     margin: 2rem auto;
@@ -87,6 +80,7 @@ h1 {
     margin-bottom: 1rem;
 }
 
+/* Footer */
 footer {
     background-color: #34495e;
     color: white;
@@ -95,7 +89,7 @@ footer {
     margin-top: 2rem;
 }
 
-/* Dashboard Components */
+/* Dashboard */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -222,7 +216,7 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Button Styles */
+/* Buttons */
 .btn {
     display: inline-block;
     text-decoration: none;
@@ -232,32 +226,34 @@ footer {
     border: 2px solid;
     transition: all 0.1s;
     cursor: pointer;
+    background-color: white;
 }
 
-.btn-create {
-    background-color: white;
+.btn-create,
+.btn-accept {
     color: #28a745;
     border-color: #28a745;
 }
 
-.btn-create:hover {
+.btn-create:hover,
+.btn-accept:hover {
     background-color: #28a745;
     color: white;
 }
 
-.btn-delete {
-    background-color: white;
+.btn-delete,
+.btn-reject {
     color: #dc3545;
     border-color: #dc3545;
 }
 
-.btn-delete:hover {
+.btn-delete:hover,
+.btn-reject:hover {
     background-color: #dc3545;
     color: white;
 }
 
 .btn-connect {
-    background-color: white;
     color: #007bff;
     border-color: #007bff;
 }
@@ -267,26 +263,49 @@ footer {
     color: white;
 }
 
-.btn-accept {
-    background-color: white;
-    color: #28a745;
-    border-color: #28a745;
+.btn-primary {
+    padding: 1rem 2rem;
+    background-color: #ff8484;
+    color: white;
+    border: none;
+    border-radius: 6px;
 }
 
-.btn-accept:hover {
-    background-color: #28a745;
+.btn-primary:hover {
+    background-color: #ff6b6b;
+}
+
+.btn-secondary {
+    padding: 1rem 2rem;
+    color: #ff8484;
+    border-color: #ff8484;
+}
+
+.btn-secondary:hover {
+    background-color: #ff8484;
     color: white;
 }
 
-.btn-reject {
-    background-color: white;
-    color: #dc3545;
-    border-color: #dc3545;
+.btn-submit {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #ff8484;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.btn-reject:hover {
-    background-color: #dc3545;
-    color: white;
+.btn-submit:hover {
+    background-color: #ff6b6b;
+}
+
+.btn-submit:disabled {
+    background-color: #dee2e6;
+    cursor: not-allowed;
 }
 
 .btn-large {
@@ -299,29 +318,7 @@ footer {
     font-size: 0.8rem;
 }
 
-@media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .connections-display {
-        grid-template-columns: 1fr;
-    }
-
-    nav {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .nav-links {
-        gap: 1rem;
-    }
-
-    main {
-        padding: 0 1rem;
-    }
-}
-
+/* Auth Pages */
 .auth-container {
     max-width: 400px;
     margin: 4rem auto;
@@ -370,28 +367,6 @@ footer {
     border-color: #ff8484;
 }
 
-.btn-submit {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #ff8484;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-submit:hover {
-    background-color: #ff6b6b;
-}
-
-.btn-submit:disabled {
-    background-color: #dee2e6;
-    cursor: not-allowed;
-}
-
 .auth-footer {
     text-align: center;
     margin-top: 1.5rem;
@@ -406,129 +381,6 @@ footer {
 
 .auth-footer a:hover {
     text-decoration: underline;
-}
-
-.error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    display: none;
-}
-
-.success-message {
-    background-color: #d4edda;
-    color: #155724;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    display: none;
-}
-
-
-.auth-container {
-    max-width: 400px;
-    margin: 4rem auto;
-    padding: 2rem;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.auth-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.auth-header h1 {
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.auth-header p {
-    color: #6c757d;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #dee2e6;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: #ff8484;
-}
-
-.btn-submit {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #ff8484;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-submit:hover {
-    background-color: #ff6b6b;
-}
-
-.btn-submit:disabled {
-    background-color: #dee2e6;
-    cursor: not-allowed;
-}
-
-.auth-footer {
-    text-align: center;
-    margin-top: 1.5rem;
-    color: #6c757d;
-}
-
-.auth-footer a {
-    color: #ff8484;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.auth-footer a:hover {
-    text-decoration: underline;
-}
-
-.error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    display: none;
-}
-
-.success-message {
-    background-color: #d4edda;
-    color: #155724;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    display: none;
 }
 
 .password-requirements {
@@ -537,6 +389,26 @@ footer {
     margin-top: 0.5rem;
 }
 
+/* Messages */
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: none;
+}
+
+.success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    display: none;
+}
+
+/* Welcome Page */
 .welcome-container {
     max-width: 800px;
     margin: 4rem auto;
@@ -562,40 +434,31 @@ footer {
     margin-top: 2rem;
 }
 
-.btn-primary {
-    padding: 1rem 2rem;
-    background-color: #ff8484;
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: bold;
-    transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-    background-color: #ff6b6b;
-}
-
-.btn-secondary {
-    padding: 1rem 2rem;
-    background-color: white;
-    color: #ff8484;
-    text-decoration: none;
-    border-radius: 6px;
-    border: 2px solid #ff8484;
-    font-weight: bold;
-    transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-    background-color: #ff8484;
-    color: white;
-}
-
+/* Utility Classes */
 .user-dashboard {
     display: none;
 }
 
 .guest-dashboard {
     display: block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    nav {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .nav-links {
+        gap: 1rem;
+    }
+
+    main {
+        padding: 0 1rem;
+    }
 }
