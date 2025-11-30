@@ -275,4 +275,71 @@ impl Database {
 
         Ok(())
     }
+
+    // Book-related database methods
+    pub async fn create_book(
+        &self,
+        title: &str,
+        author: Option<&str>,
+        isbn: Option<&str>,
+        publication_year: Option<i32>,
+    ) -> Result<String, DynError> {
+        let book_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            "INSERT INTO books (id, title, author, isbn, publication_year, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&book_id)
+        .bind(title)
+        .bind(author)
+        .bind(isbn)
+        .bind(publication_year)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(book_id)
+    }
+
+    pub async fn get_all_books(&self) -> Result<Vec<crate::Book>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT id, title, author, isbn, publication_year, created_at FROM books ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let books = rows
+            .into_iter()
+            .map(|row| crate::Book {
+                id: row.get("id"),
+                title: row.get("title"),
+                author: row.get("author"),
+                isbn: row.get("isbn"),
+                publication_year: row.get("publication_year"),
+                created_at: row.get("created_at"),
+            })
+            .collect();
+
+        Ok(books)
+    }
+
+    pub async fn get_book_by_id(&self, book_id: &str) -> Result<Option<crate::Book>, sqlx::Error> {
+        let row = sqlx::query(
+            "SELECT id, title, author, isbn, publication_year, created_at FROM books WHERE id = ?",
+        )
+        .bind(book_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|row| crate::Book {
+            id: row.get("id"),
+            title: row.get("title"),
+            author: row.get("author"),
+            isbn: row.get("isbn"),
+            publication_year: row.get("publication_year"),
+            created_at: row.get("created_at"),
+        }))
+    }
 }

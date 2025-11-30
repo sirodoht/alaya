@@ -3,46 +3,29 @@
 {% block title %}Login - ālaya{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-header">
+<div class="form-container">
+    <div class="form-header">
         <h1>Welcome back</h1>
         <p>Login to your account</p>
     </div>
 
     {% if let Some(message) = error_message %}
-    <div class="error-message">
-        {{ message }}
-    </div>
+    <div class="error-message">{{ message }}</div>
     {% endif %}
 
-    <form method="post" action="/login" class="auth-form">
+    <form method="post" action="/login">
         <div class="form-group">
             <label for="username">Username</label>
-            <input
-                type="text"
-                id="username"
-                name="username"
-                value="{{ form_username }}"
-                required
-                autocomplete="username"
-            >
+            <input type="text" id="username" name="username" value="{{ form_username }}" required autocomplete="username">
         </div>
-
         <div class="form-group">
             <label for="password">Password</label>
-            <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                autocomplete="current-password"
-            >
+            <input type="password" id="password" name="password" required autocomplete="current-password">
         </div>
-
         <button type="submit" class="btn-submit">Login</button>
     </form>
 
-    <div class="auth-footer">
+    <div class="form-footer">
         Don't have an account? <a href="/signup">Sign up</a>
     </div>
 </div>

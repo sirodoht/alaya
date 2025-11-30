@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <h1>Add a Book</h1>
+        <p>Add a new book to your collection</p>
+    </div>
+
+    {% if let Some(error) = error_message %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/books/new">
+        <div class="form-group">
+            <label for="title">Title *</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="author">Author</label>
+            <input type="text" id="author" name="author">
+        </div>
+        <div class="form-group">
+            <label for="isbn">ISBN</label>
+            <input type="text" id="isbn" name="isbn">
+        </div>
+        <div class="form-group">
+            <label for="publication_year">Publication Year</label>
+            <input type="number" id="publication_year" name="publication_year" min="1000" max="2100">
+        </div>
+        <button type="submit" class="btn-submit">Add Book</button>
+    </form>
+
+    <div class="form-footer">
+        <a href="/">← Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

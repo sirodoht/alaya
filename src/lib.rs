@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::{
     Router,
-    extract::{Form, State},
+    extract::{Form, Path, State},
     http::{HeaderMap, HeaderValue, header},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -20,6 +20,7 @@ pub type AppState = Arc<Database>;
 pub struct DashboardTemplate {
     pub is_authenticated: bool,
     pub username: String,
+    pub books: Vec<Book>,
 }
 
 #[derive(Template)]
@@ -40,6 +41,22 @@ pub struct SignupTemplate {
     pub error_message: Option<String>,
 }
 
+#[derive(Template)]
+#[template(path = "book_form.html")]
+pub struct BookFormTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub error_message: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "book_detail.html")]
+pub struct BookDetailTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub book: Book,
+}
+
 // User-related structures for API
 #[derive(sqlx::FromRow, Serialize)]
 pub struct User {
@@ -47,6 +64,17 @@ pub struct User {
     pub username: String,
     #[serde(skip)] // Never serialize password hash
     pub password_hash: String,
+    pub created_at: String,
+}
+
+// Book-related structures
+#[derive(sqlx::FromRow, Serialize)]
+pub struct Book {
+    pub id: String,
+    pub title: String,
+    pub author: Option<String>,
+    pub isbn: Option<String>,
+    pub publication_year: Option<i32>,
     pub created_at: String,
 }
 
@@ -60,10 +88,12 @@ pub struct LoginRequest {
 
 pub async fn dashboard(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     let user = current_user(&db, &headers).await;
+    let books = db.get_all_books().await.unwrap_or_default();
 
     let template = DashboardTemplate {
         is_authenticated: user.is_some(),
         username: user.map(|u| u.username).unwrap_or_default(),
+        books,
     };
 
     Html(template.render().unwrap())
@@ -132,6 +162,14 @@ pub struct SignupForm {
     pub confirm_password: String,
 }
 
+#[derive(Deserialize)]
+pub struct CreateBookForm {
+    pub title: String,
+    pub author: String,
+    pub isbn: String,
+    pub publication_year: String,
+}
+
 pub async fn signup_submit(State(db): State<AppState>, Form(form): Form<SignupForm>) -> Response {
     let username = form.username.trim().to_string();
     let password = form.password;
@@ -197,6 +235,95 @@ pub async fn logout(State(db): State<AppState>, headers: HeaderMap) -> Response 
     response
 }
 
+pub async fn book_form_page(State(db): State<AppState>, headers: HeaderMap) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let template = BookFormTemplate {
+        is_authenticated: true,
+        username: user.map(|u| u.username).unwrap_or_default(),
+        error_message: None,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
+pub async fn book_create(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<CreateBookForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    let Some(user) = user else {
+        return Redirect::to("/login").into_response();
+    };
+
+    let title = form.title.trim();
+    if title.is_empty() {
+        let template = BookFormTemplate {
+            is_authenticated: true,
+            username: user.username,
+            error_message: Some("Title is required".to_string()),
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    let author = if form.author.trim().is_empty() {
+        None
+    } else {
+        Some(form.author.trim())
+    };
+
+    let isbn = if form.isbn.trim().is_empty() {
+        None
+    } else {
+        Some(form.isbn.trim())
+    };
+
+    let publication_year = form.publication_year.trim().parse::<i32>().ok();
+
+    match db.create_book(title, author, isbn, publication_year).await {
+        Ok(_) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Book creation error: {error}");
+            let template = BookFormTemplate {
+                is_authenticated: true,
+                username: user.username,
+                error_message: Some("Could not create book. Please try again.".to_string()),
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+    }
+}
+
+pub async fn book_detail(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => {
+            let template = BookDetailTemplate {
+                is_authenticated: user.is_some(),
+                username: user.map(|u| u.username).unwrap_or_default(),
+                book,
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+        Ok(None) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            Redirect::to("/").into_response()
+        }
+    }
+}
+
 fn render_login(form_username: String, error_message: Option<String>) -> Response {
     let template = LoginTemplate {
         is_authenticated: false,
@@ -255,5 +382,7 @@ pub fn create_app(db: AppState) -> Router {
         .route("/login", get(login_page).post(login_submit))
         .route("/signup", get(signup_page).post(signup_submit))
         .route("/logout", post(logout))
+        .route("/books/new", get(book_form_page).post(book_create))
+        .route("/books/{id}", get(book_detail))
         .with_state(db)
 }
