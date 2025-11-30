@@ -421,12 +421,7 @@ fn clear_session_cookie() -> HeaderValue {
 
 fn signups_disabled() -> bool {
     env::var("DISABLE_SIGNUPS")
-        .map(|value| {
-            let trimmed = value.trim();
-            trimmed == "1"
-                || trimmed.eq_ignore_ascii_case("true")
-                || trimmed.eq_ignore_ascii_case("yes")
-        })
+        .map(|value| value.trim() == "1")
         .unwrap_or(false)
 }
 

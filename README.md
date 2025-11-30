@@ -39,7 +39,7 @@ cargo run --bin alayascan "Invisible Cities"
 Set the environment variable below to block new account creation in the web UI:
 
 ```sh
-export DISABLE_SIGNUPS=true
+export DISABLE_SIGNUPS=1
 ```
 
 ## License
