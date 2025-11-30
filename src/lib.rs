@@ -2,22 +2,23 @@ use askama::Template;
 use axum::{
     Router,
     extract::{Form, Path, State},
-    http::{HeaderMap, HeaderValue, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 pub mod database;
+pub mod gpt;
 pub use database::Database;
 
 // Application state
 pub type AppState = Arc<Database>;
 
 #[derive(Template)]
-#[template(path = "dashboard.html")]
-pub struct DashboardTemplate {
+#[template(path = "book_list.html")]
+pub struct BookListTemplate {
     pub is_authenticated: bool,
     pub username: String,
     pub books: Vec<Book>,
@@ -86,11 +87,11 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-pub async fn dashboard(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     let user = current_user(&db, &headers).await;
     let books = db.get_all_books().await.unwrap_or_default();
 
-    let template = DashboardTemplate {
+    let template = BookListTemplate {
         is_authenticated: user.is_some(),
         username: user.map(|u| u.username).unwrap_or_default(),
         books,
@@ -152,6 +153,10 @@ pub async fn signup_page(State(db): State<AppState>, headers: HeaderMap) -> impl
         return Redirect::to("/").into_response();
     }
 
+    if signups_disabled() {
+        return signup_disabled_response();
+    }
+
     render_signup(String::new(), None)
 }
 
@@ -171,6 +176,10 @@ pub struct CreateBookForm {
 }
 
 pub async fn signup_submit(State(db): State<AppState>, Form(form): Form<SignupForm>) -> Response {
+    if signups_disabled() {
+        return signup_disabled_response();
+    }
+
     let username = form.username.trim().to_string();
     let password = form.password;
     let confirm_password = form.confirm_password;
@@ -375,10 +384,29 @@ fn clear_session_cookie() -> HeaderValue {
     HeaderValue::from_static("session_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax")
 }
 
+fn signups_disabled() -> bool {
+    env::var("DISABLE_SIGNUPS")
+        .map(|value| {
+            let trimmed = value.trim();
+            trimmed == "1"
+                || trimmed.eq_ignore_ascii_case("true")
+                || trimmed.eq_ignore_ascii_case("yes")
+        })
+        .unwrap_or(false)
+}
+
+fn signup_disabled_response() -> Response {
+    (
+        StatusCode::FORBIDDEN,
+        "Signups are currently disabled. Please contact the administrator.",
+    )
+        .into_response()
+}
+
 // App creation function
 pub fn create_app(db: AppState) -> Router {
     Router::new()
-        .route("/", get(dashboard))
+        .route("/", get(book_list))
         .route("/login", get(login_page).post(login_submit))
         .route("/signup", get(signup_page).post(signup_submit))
         .route("/logout", post(logout))
