@@ -9,6 +9,8 @@ User=deploy
 Group=www-data
 WorkingDirectory=/var/www/alaya
 ExecStart=/var/www/alaya/target/release/alayaserver --serve --port 4002 --database /var/www/alaya/alaya.db
+Environment="DISABLE_SIGNUPS=0"
+Environment="OPENAI_API_KEY=sk-xxx"
 Restart=always
 RestartSec=5
 

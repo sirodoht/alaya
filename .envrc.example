@@ -1,0 +1,2 @@
+export DISABLE_SIGNUPS=0
+export OPENAI_API_KEY=sk-xxx
