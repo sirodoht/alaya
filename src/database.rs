@@ -342,4 +342,11 @@ impl Database {
             created_at: row.get("created_at"),
         }))
     }
+
+    pub async fn get_book_count(&self) -> Result<i64, sqlx::Error> {
+        let row = sqlx::query("SELECT COUNT(*) as count FROM books")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(row.get("count"))
+    }
 }

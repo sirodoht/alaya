@@ -1,39 +1,41 @@
 {% extends "layout.html" %}
 
-{% block title %}{{ book.title }} - ālaya{% endblock %}
+{% block title %}{{ book.title }}{% endblock title %}
 
 {% block content %}
-<div class="book-detail">
-    <div class="book-detail-header">
-        <h1>{{ book.title }}</h1>
-        {% if let Some(author) = book.author %}
-        <p class="book-detail-author">by {{ author }}</p>
-        {% endif %}
-    </div>
-
-    <div class="book-detail-info">
-        {% if let Some(year) = book.publication_year %}
-        <div class="book-detail-row">
-            <span class="book-detail-label">Publication Year</span>
-            <span class="book-detail-value">{{ year }}</span>
-        </div>
-        {% endif %}
-
-        {% if let Some(isbn) = book.isbn %}
-        <div class="book-detail-row">
-            <span class="book-detail-label">ISBN</span>
-            <span class="book-detail-value book-isbn">{{ isbn }}</span>
-        </div>
-        {% endif %}
-
-        <div class="book-detail-row">
-            <span class="book-detail-label">Added</span>
-            <span class="book-detail-value">{{ book.created_at }}</span>
+<section>
+    <div class="page-row">
+        <div class="page-header">
+            <h1>{{ book.title }}</h1>
+            {% if let Some(author) = book.author %}
+            <p class="books-detail-author">{{ author }}</p>
+            {% endif %}
         </div>
     </div>
 
-    <div class="book-detail-actions">
-        <a href="/" class="btn-secondary">← Back to Dashboard</a>
+    {% if let Some(year) = book.publication_year %}
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">Publication Year</span>
+            <span class="page-value">{{ year }}</span>
+        </div>
     </div>
-</div>
-{% endblock %}
+    {% endif %}
+
+    {% if let Some(isbn) = book.isbn %}
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">ISBN</span>
+            <span class="page-value">{{ isbn }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">Added</span>
+            <span class="page-value">{{ book.created_date() }}</span>
+        </div>
+    </div>
+</section>
+{% endblock content %}

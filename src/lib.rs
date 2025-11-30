@@ -58,6 +58,14 @@ pub struct BookDetailTemplate {
     pub book: Book,
 }
 
+#[derive(Template)]
+#[template(path = "profile.html")]
+pub struct ProfileTemplate {
+    pub is_authenticated: bool,
+    pub username: String,
+    pub book_count: i64,
+}
+
 // User-related structures for API
 #[derive(sqlx::FromRow, Serialize)]
 pub struct User {
@@ -77,6 +85,15 @@ pub struct Book {
     pub isbn: Option<String>,
     pub publication_year: Option<i32>,
     pub created_at: String,
+}
+
+impl Book {
+    pub fn created_date(&self) -> &str {
+        self.created_at
+            .split('T')
+            .next()
+            .unwrap_or(&self.created_at)
+    }
 }
 
 #[derive(Deserialize)]
@@ -333,6 +350,24 @@ pub async fn book_detail(
     }
 }
 
+pub async fn profile_page(State(db): State<AppState>, headers: HeaderMap) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let book_count = db.get_book_count().await.unwrap_or(0);
+
+    let template = ProfileTemplate {
+        is_authenticated: true,
+        username: user.map(|u| u.username).unwrap_or_default(),
+        book_count,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
 fn render_login(form_username: String, error_message: Option<String>) -> Response {
     let template = LoginTemplate {
         is_authenticated: false,
@@ -410,6 +445,7 @@ pub fn create_app(db: AppState) -> Router {
         .route("/login", get(login_page).post(login_submit))
         .route("/signup", get(signup_page).post(signup_submit))
         .route("/logout", post(logout))
+        .route("/profile", get(profile_page))
         .route("/books/new", get(book_form_page).post(book_create))
         .route("/books/{id}", get(book_detail))
         .with_state(db)

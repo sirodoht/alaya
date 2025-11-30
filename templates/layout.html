@@ -11,25 +11,25 @@
 <body>
     <header>
         <nav>
-            <a href="/" class="logo">ālaya</a>
-            <ul class="nav-links">
-                <li><a href="/">Dashboard</a></li>
+            <a href="/" class="nav-logo">book notes</a>
+            <div class="nav-links">
                 {% if is_authenticated %}
-                <li><span class="nav-username">{{ username }}</span></li>
-                <li>
-                    <form method="post" action="/logout" class="nav-logout-form">
-                        <button type="submit" class="nav-button">Logout</button>
-                    </form>
-                </li>
+                <a href="/">book list</a>
+                <a href="/books/new">add book</a>
+                <a href="/profile">{{ username }}</a>
+                <form method="post" action="/logout" class="nav-form">
+                    <input type="submit" value="logout">
+                </form>
                 {% else %}
-                <li><a href="/login">Login</a></li>
-                <li><a href="/signup">Sign up</a></li>
+                <a href="/login">login</a>
+                <a href="/signup">sign up</a>
                 {% endif %}
-            </ul>
+            </div>
         </nav>
     </header>
     <main>
-        {% block content %}{% endblock %}
+        {% block content %}
+        {% endblock content %}
     </main>
 </body>
 </html>

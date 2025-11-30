@@ -1,32 +1,40 @@
 {% extends "layout.html" %}
 
-{% block title %}Login - ālaya{% endblock %}
+{% block title %}login{% endblock title %}
 
 {% block content %}
-<div class="form-container">
-    <div class="form-header">
-        <h1>Welcome back</h1>
-        <p>Login to your account</p>
+<section>
+    <div class="page-row">
+        <div class="page-header">
+            <h1>welcome back</h1>
+            <p>login to your account</p>
+        </div>
     </div>
 
     {% if let Some(message) = error_message %}
-    <div class="error-message">{{ message }}</div>
+    <div class="page-row">
+        <div class="page-error">{{ message }}</div>
+    </div>
     {% endif %}
 
     <form method="post" action="/login">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" value="{{ form_username }}" required autocomplete="username">
+        <div class="page-row">
+            <div class="page-content">
+                <label for="username">username</label>
+                <input type="text" id="username" name="username" value="{{ form_username }}" required autocomplete="username">
+            </div>
         </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="current-password">
+        <div class="page-row">
+            <div class="page-content">
+                <label for="password">password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
         </div>
-        <button type="submit" class="btn-submit">Login</button>
+        <div class="page-row">
+            <div class="page-content form-actions">
+                <button type="submit">login</button>
+            </div>
+        </div>
     </form>
-
-    <div class="form-footer">
-        Don't have an account? <a href="/signup">Sign up</a>
-    </div>
-</div>
-{% endblock %}
+</section>
+{% endblock content %}

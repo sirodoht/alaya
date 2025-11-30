@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}profile{% endblock title %}
+
+{% block content %}
+<section>
+    <div class="page-row">
+        <div class="page-header">
+            <h1>{{ username }}</h1>
+            <p>profile</p>
+        </div>
+    </div>
+
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">books</span>
+            <span class="page-value">{{ book_count }}</span>
+        </div>
+    </div>
+</section>
+{% endblock content %}

@@ -1,38 +1,46 @@
 {% extends "layout.html" %}
 
-{% block title %}Sign Up - ālaya{% endblock %}
+{% block title %}sign up{% endblock title %}
 
 {% block content %}
-<div class="form-container">
-    <div class="form-header">
-        <h1>Create Account</h1>
-        <p>Sign up to get started</p>
+<section>
+    <div class="page-row">
+        <div class="page-header">
+            <h1>create account</h1>
+            <p>sign up to get started</p>
+        </div>
     </div>
 
     {% if let Some(message) = error_message %}
-    <div class="error-message">{{ message }}</div>
+    <div class="page-row">
+        <div class="page-error">{{ message }}</div>
+    </div>
     {% endif %}
 
     <form method="post" action="/signup">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" value="{{ form_username }}" required autocomplete="username">
+        <div class="page-row">
+            <div class="page-content">
+                <label for="username">username</label>
+                <input type="text" id="username" name="username" value="{{ form_username }}" required autocomplete="username">
+            </div>
         </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required autocomplete="new-password">
-            <div class="password-requirements">Password should be at least 8 characters long</div>
+        <div class="page-row">
+            <div class="page-content">
+                <label for="password">password</label>
+                <input type="password" id="password" name="password" required autocomplete="new-password">
+            </div>
         </div>
-        <div class="form-group">
-            <label for="confirm-password">Confirm Password</label>
-            <input type="password" id="confirm-password" name="confirm_password" required autocomplete="new-password">
+        <div class="page-row">
+            <div class="page-content">
+                <label for="confirm-password">confirm password</label>
+                <input type="password" id="confirm-password" name="confirm_password" required autocomplete="new-password">
+            </div>
         </div>
-        <button type="submit" class="btn-submit">Sign Up</button>
+        <div class="page-row">
+            <div class="page-content form-actions">
+                <button type="submit">sign up</button>
+            </div>
+        </div>
     </form>
-
-    <div class="form-footer">
-        Already have an account? <a href="/login">Login</a>
-    </div>
-</div>
-{% endblock %}
-
+</section>
+{% endblock content %}
