@@ -5,7 +5,11 @@
 {% block content %}
 <section>
     {% if books.is_empty() %}
-    <p>No books have been added yet.</p>
+    <section>
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <p><em>(no books)</em></p>
+        </div>
+    </section>
     {% else %}
     <div class="books-list">
 
