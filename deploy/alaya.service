@@ -8,7 +8,7 @@ Type=simple
 User=deploy
 Group=www-data
 WorkingDirectory=/var/www/alaya
-ExecStart=/var/www/alaya/target/release/alaya --serve --port 4002 --database /var/www/alaya/alaya.db
+ExecStart=/var/www/alaya/target/release/alayaserver --serve --port 4002 --database /var/www/alaya/alaya.db
 Restart=always
 RestartSec=5
 
