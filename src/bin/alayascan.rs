@@ -89,9 +89,13 @@ async fn scan_directory(
         None
     };
 
+    // Canonicalize the base path for proper relative path calculation
+    let base_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+
     println!("Scanning directory: {}", dir_path);
     if save_to_db {
         println!("Saving books to database...");
+        println!("(storing paths relative to LIBRARY_PATH)");
     }
     println!();
 
@@ -108,6 +112,14 @@ async fn scan_directory(
                     if BOOK_EXTENSIONS.contains(&ext_lower.as_str()) {
                         println!("{}", file_path.display());
 
+                        // Calculate relative path from the base directory
+                        let relative_path = file_path
+                            .canonicalize()
+                            .ok()
+                            .and_then(|p| p.strip_prefix(&base_path).ok().map(|r| r.to_path_buf()))
+                            .unwrap_or_else(|| file_path.to_path_buf());
+                        let relative_path_str = relative_path.to_string_lossy().to_string();
+
                         // Extract metadata based on file type
                         let book_data = if ext_lower == "epub" {
                             extract_epub_metadata(file_path).map(|m| {
@@ -117,7 +129,7 @@ async fn scan_directory(
                                     author: m.author,
                                     isbn: m.isbn,
                                     publication_year: parse_year(&m.date),
-                                    filepath: file_path.to_string_lossy().to_string(),
+                                    filepath: relative_path_str.clone(),
                                 }
                             })
                         } else if ext_lower == "pdf" {
@@ -128,7 +140,7 @@ async fn scan_directory(
                                     author: m.author,
                                     isbn: None,
                                     publication_year: parse_year(&m.creation_date),
-                                    filepath: file_path.to_string_lossy().to_string(),
+                                    filepath: relative_path_str.clone(),
                                 }
                             })
                         } else {
@@ -141,7 +153,7 @@ async fn scan_directory(
                                 author: None,
                                 isbn: None,
                                 publication_year: None,
-                                filepath: file_path.to_string_lossy().to_string(),
+                                filepath: relative_path_str.clone(),
                             })
                         };
 

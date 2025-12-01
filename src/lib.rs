@@ -351,6 +351,66 @@ pub async fn book_detail(
     }
 }
 
+pub async fn book_download(State(db): State<AppState>, Path(book_id): Path<String>) -> Response {
+    let book = match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => book,
+        Ok(None) => {
+            return (StatusCode::NOT_FOUND, "Book not found").into_response();
+        }
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
+        }
+    };
+
+    let Some(filepath) = &book.filepath else {
+        return (StatusCode::NOT_FOUND, "No file associated with this book").into_response();
+    };
+
+    // Get library path from environment, default to current directory
+    let library_path = env::var("LIBRARY_PATH").unwrap_or_else(|_| ".".to_string());
+    let full_path = std::path::Path::new(&library_path).join(filepath);
+
+    if !full_path.exists() {
+        eprintln!("File not found: {}", full_path.display());
+        return (StatusCode::NOT_FOUND, "File not found on disk").into_response();
+    }
+
+    let file_contents = match std::fs::read(&full_path) {
+        Ok(contents) => contents,
+        Err(error) => {
+            eprintln!("Error reading file: {error}");
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Could not read file").into_response();
+        }
+    };
+
+    // Determine content type based on extension
+    let content_type = match full_path.extension().and_then(|e| e.to_str()) {
+        Some("pdf") => "application/pdf",
+        Some("epub") => "application/epub+zip",
+        Some("mobi") => "application/x-mobipocket-ebook",
+        Some("txt") => "text/plain",
+        Some("docx") => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        _ => "application/octet-stream",
+    };
+
+    // Get filename for Content-Disposition header
+    let filename = full_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("download");
+
+    let headers = [
+        (header::CONTENT_TYPE, content_type),
+        (
+            header::CONTENT_DISPOSITION,
+            &format!("attachment; filename=\"{}\"", filename),
+        ),
+    ];
+
+    (headers, file_contents).into_response()
+}
+
 pub async fn profile_page(State(db): State<AppState>, headers: HeaderMap) -> Response {
     let user = current_user(&db, &headers).await;
 
@@ -444,5 +504,6 @@ pub fn create_app(db: AppState) -> Router {
         .route("/profile", get(profile_page))
         .route("/books/new", get(book_form_page).post(book_create))
         .route("/books/{id}", get(book_detail))
+        .route("/books/{id}/download", get(book_download))
         .with_state(db)
 }

@@ -37,5 +37,20 @@
             <span class="page-value">{{ book.created_date() }}</span>
         </div>
     </div>
+
+    {% if let Some(filepath) = book.filepath %}
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">File</span>
+            <span class="page-value">{{ filepath }}</span>
+        </div>
+    </div>
+    <div class="page-row">
+        <div class="page-content page-actions">
+            <a href="/books/{{ book.id }}/download" class="btn">Download</a>
+        </div>
+    </div>
+    {% endif %}
+
 </section>
 {% endblock content %}

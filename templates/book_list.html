@@ -17,7 +17,17 @@
         <div class="books-list-item">
             <a href="/books/{{ book.id }}" class="books-list-item-link">
                 <div class="books-list-item-info">
-                    <span class="books-list-item-title">{{ book.title }}</span>
+                    <span class="books-list-item-title">
+                        {% if book.title.is_empty() %}
+                            {% if let Some(filepath) = book.filepath %}
+                                {{ filepath }}
+                            {% else %}
+                                <em>(untitled)</em>
+                            {% endif %}
+                        {% else %}
+                            {{ book.title }}
+                        {% endif %}
+                    </span>
                     {% if let Some(author) = book.author %}
                     <span class="books-list-item-author">{{ author }}</span>
                     {% endif %}
