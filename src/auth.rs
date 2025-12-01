@@ -9,7 +9,7 @@ use std::env;
 
 use crate::AppState;
 use crate::database::Database;
-use crate::templates::{LoginTemplate, ProfileTemplate, SignupTemplate};
+use crate::templates::{ChangePasswordTemplate, LoginTemplate, ProfileTemplate, SignupTemplate};
 
 // User-related structures
 #[derive(sqlx::FromRow, Serialize)]
@@ -36,7 +36,7 @@ pub struct SignupForm {
 
 pub async fn login_page(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     if current_user(&db, &headers).await.is_some() {
-        return Redirect::to("/").into_response();
+        return Redirect::to("/profile").into_response();
     }
 
     render_login(String::new(), None)
@@ -84,7 +84,7 @@ pub async fn login_submit(State(db): State<AppState>, Form(form): Form<LoginRequ
 
 pub async fn signup_page(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     if current_user(&db, &headers).await.is_some() {
-        return Redirect::to("/").into_response();
+        return Redirect::to("/profile").into_response();
     }
 
     if signups_disabled() {
@@ -180,6 +180,78 @@ pub async fn profile_page(State(db): State<AppState>, headers: HeaderMap) -> Res
     };
 
     Html(template.render().unwrap()).into_response()
+}
+
+pub async fn change_password_page(State(db): State<AppState>, headers: HeaderMap) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let template = ChangePasswordTemplate {
+        is_authenticated: true,
+        signups_disabled: signups_disabled(),
+        username: user.map(|u| u.username).unwrap_or_default(),
+        error_message: None,
+        success_message: None,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct ChangePasswordForm {
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+pub async fn change_password(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<ChangePasswordForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    let Some(user) = user else {
+        return Redirect::to("/login").into_response();
+    };
+
+    if form.new_password != form.confirm_password {
+        let template = ChangePasswordTemplate {
+            is_authenticated: true,
+            signups_disabled: signups_disabled(),
+            username: user.username,
+            error_message: Some("Passwords do not match".to_string()),
+            success_message: None,
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    // Update password
+    match db.update_password(&user.id, &form.new_password).await {
+        Ok(_) => {
+            let template = ChangePasswordTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                error_message: None,
+                success_message: Some("Password changed successfully".to_string()),
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+        Err(error) => {
+            eprintln!("Password update error: {error}");
+            let template = ChangePasswordTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                error_message: Some("Could not update password. Please try again.".to_string()),
+                success_message: None,
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+    }
 }
 
 fn render_login(form_username: String, error_message: Option<String>) -> Response {

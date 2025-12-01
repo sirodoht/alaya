@@ -224,6 +224,20 @@ impl Database {
             .is_ok())
     }
 
+    pub async fn update_password(&self, user_id: &str, new_password: &str) -> Result<(), DynError> {
+        let password_hash = self.hash_password(new_password)?;
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
+            .bind(&password_hash)
+            .bind(&now)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
     // Session management methods
     pub async fn create_session(&self, user_id: &str) -> Result<String, DynError> {
         // Generate a simple session token (UUID)

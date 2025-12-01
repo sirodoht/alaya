@@ -86,3 +86,13 @@ pub struct ProfileTemplate {
     pub username: String,
     pub book_count: i64,
 }
+
+#[derive(Template)]
+#[template(path = "change_password.html")]
+pub struct ChangePasswordTemplate {
+    pub is_authenticated: bool,
+    pub signups_disabled: bool,
+    pub username: String,
+    pub error_message: Option<String>,
+    pub success_message: Option<String>,
+}
