@@ -242,9 +242,5 @@ pub fn signups_disabled() -> bool {
 }
 
 fn signup_disabled_response() -> Response {
-    (
-        StatusCode::FORBIDDEN,
-        "Signups are currently disabled. Please contact the administrator.",
-    )
-        .into_response()
+    (StatusCode::FORBIDDEN, "signups are disabled.").into_response()
 }
