@@ -65,6 +65,55 @@ impl GptClient {
             .ok_or_else(|| GptError::UnexpectedResponse("Empty response from GPT-5-mini".into()))
     }
 
+    pub async fn extract_book_metadata(
+        &self,
+        query: &str,
+        model: &str,
+    ) -> Result<BookMetadata, GptError> {
+        let prompt = format!(
+            "Identify this book: \"{query}\"\n\n\
+            Return the information as JSON with these fields:\n\
+            - title: the correct full title\n\
+            - author: the correct author name\n\
+            - isbn: the ISBN-13 if known, otherwise null\n\
+            - publication_year: the original publication year if known, otherwise null\n\n\
+            Return ONLY valid JSON, no other text."
+        );
+
+        let request = ChatCompletionRequest {
+            model: model.to_string(),
+            messages: vec![
+                ChatMessage::system(
+                    "You are a knowledgeable librarian assistant. \
+                    Always respond with valid JSON only, no markdown or extra text.",
+                ),
+                ChatMessage::user(prompt),
+            ],
+        };
+
+        let response = self.send_chat(request).await?;
+        let content = response
+            .choices
+            .into_iter()
+            .map(|choice| choice.message.content)
+            .find(|content| !content.trim().is_empty())
+            .ok_or_else(|| GptError::UnexpectedResponse("Empty response from GPT".into()))?;
+
+        // Parse JSON response, stripping any markdown code fences if present
+        let json_str = content
+            .trim()
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+
+        serde_json::from_str(json_str).map_err(|e| {
+            GptError::UnexpectedResponse(format!(
+                "Failed to parse book metadata: {e}\nRaw: {content}"
+            ))
+        })
+    }
+
     pub async fn send_chat(
         &self,
         request: ChatCompletionRequest,
@@ -74,6 +123,18 @@ impl GptClient {
             .api_key()
             .ok_or(GptError::MissingApiKey)?
             .to_string();
+
+        // Log the request
+        println!("OpenAI API Request:");
+        println!("  URL: {}", OPENAI_CHAT_COMPLETIONS_URL);
+        println!("  Model: {}", request.model);
+        for msg in &request.messages {
+            println!(
+                "  [{role}]: {content}",
+                role = msg.role,
+                content = msg.content
+            );
+        }
 
         let response = self
             .http
@@ -105,6 +166,14 @@ pub enum GptError {
     UnexpectedResponse(String),
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BookMetadata {
+    pub title: String,
+    pub author: Option<String>,
+    pub isbn: Option<String>,
+    pub publication_year: Option<i32>,
+}
+
 impl fmt::Display for GptError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -128,7 +197,7 @@ impl Error for GptError {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChatMessage {
-    role: String,
+    pub role: String,
     pub content: String,
 }
 

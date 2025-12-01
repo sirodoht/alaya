@@ -41,6 +41,15 @@ pub struct BookFormTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "book_quick_add.html")]
+pub struct QuickAddTemplate {
+    pub is_authenticated: bool,
+    pub signups_disabled: bool,
+    pub username: String,
+    pub error_message: Option<String>,
+}
+
+#[derive(Template)]
 #[template(path = "book_detail.html")]
 pub struct BookDetailTemplate {
     pub is_authenticated: bool,

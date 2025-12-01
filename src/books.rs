@@ -9,7 +9,8 @@ use std::env;
 
 use crate::AppState;
 use crate::auth::{current_user, signups_disabled};
-use crate::templates::{BookDetailTemplate, BookFormTemplate, BookListTemplate};
+use crate::gpt::{GptClient, GptConfig};
+use crate::templates::{BookDetailTemplate, BookFormTemplate, BookListTemplate, QuickAddTemplate};
 
 // Book-related structures
 #[derive(sqlx::FromRow, Serialize, Clone)]
@@ -38,6 +39,12 @@ pub struct CreateBookForm {
     pub author: String,
     pub isbn: String,
     pub publication_year: String,
+}
+
+#[derive(Deserialize)]
+pub struct QuickAddForm {
+    pub query: String,
+    pub model: String,
 }
 
 pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
@@ -225,4 +232,94 @@ pub async fn book_download(State(db): State<AppState>, Path(book_id): Path<Strin
     ];
 
     (headers, file_contents).into_response()
+}
+
+pub async fn quick_add_page(State(db): State<AppState>, headers: HeaderMap) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let template = QuickAddTemplate {
+        is_authenticated: true,
+        signups_disabled: signups_disabled(),
+        username: user.map(|u| u.username).unwrap_or_default(),
+        error_message: None,
+    };
+
+    Html(template.render().unwrap()).into_response()
+}
+
+pub async fn quick_add_submit(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<QuickAddForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    let Some(user) = user else {
+        return Redirect::to("/login").into_response();
+    };
+
+    let query = form.query.trim();
+    if query.is_empty() {
+        let template = QuickAddTemplate {
+            is_authenticated: true,
+            signups_disabled: signups_disabled(),
+            username: user.username,
+            error_message: Some("Please enter a book".to_string()),
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    // Create GPT client and extract metadata
+    let gpt = GptClient::new(GptConfig::from_env());
+
+    if !gpt.has_api_key() {
+        let template = QuickAddTemplate {
+            is_authenticated: true,
+            signups_disabled: signups_disabled(),
+            username: user.username,
+            error_message: Some("AI features not available (API key not configured)".to_string()),
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    let metadata = match gpt.extract_book_metadata(query, &form.model).await {
+        Ok(m) => m,
+        Err(error) => {
+            eprintln!("GPT error: {error}");
+            let template = QuickAddTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                error_message: Some(format!("Could not identify book: {error}")),
+            };
+            return Html(template.render().unwrap()).into_response();
+        }
+    };
+
+    // Create the book with extracted metadata
+    match db
+        .create_book(
+            &metadata.title,
+            metadata.author.as_deref(),
+            metadata.isbn.as_deref(),
+            metadata.publication_year,
+        )
+        .await
+    {
+        Ok(_) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Book creation error: {error}");
+            let template = QuickAddTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                error_message: Some("Could not save book. Please try again.".to_string()),
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+    }
 }

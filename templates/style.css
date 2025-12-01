@@ -18,6 +18,11 @@ nav {
     align-items: center;
     padding: 0 32px;
 }
+@media (max-width: 768px) {
+    nav {
+        flex-direction: column;
+    }
+}
 
 .nav-logo {
     font-size: 20px;
@@ -27,10 +32,22 @@ nav {
 .nav-logo:hover {
     text-decoration: underline;
 }
+@media (max-width: 768px) {
+    .nav-logo {
+        padding: 8px 0;
+    }
+}
 
 .nav-links {
     display: flex;
     align-items: center;
+    white-space: nowrap;
+}
+@media (max-width: 768px) {
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 }
 
 .nav-links a {
@@ -122,6 +139,7 @@ main {
     margin: 0 auto;
     background-color: #f8d7da;
     color: #721c24;
+    padding: 8px;
 }
 
 .btn {
@@ -177,6 +195,34 @@ button:hover {
     background-color: #1a252f;
 }
 
+textarea {
+    padding: 4px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 300px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #6c757d;
+}
+
+select {
+    padding: 4px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+}
+
+select:focus {
+    outline: none;
+    border-color: #6c757d;
+}
+
 /* book list */
 .books-list-item {
     border-bottom: 1px solid #dee2e6;
@@ -217,6 +263,11 @@ button:hover {
 .books-list-item-isbn {
     font-family: monospace;
     color: #6c757d;
+}
+@media (max-width: 768px) {
+    .books-list-item-isbn {
+        display: none;
+    }
 }
 
 .books-list-item-meta {
