@@ -120,7 +120,7 @@ impl Database {
     }
 
     // User-related database methods
-    pub async fn get_all_users(&self) -> Result<Vec<crate::User>, sqlx::Error> {
+    pub async fn get_all_users(&self) -> Result<Vec<crate::auth::User>, sqlx::Error> {
         let rows = sqlx::query(
             "SELECT id, username, password_hash, created_at FROM users ORDER BY created_at DESC",
         )
@@ -129,7 +129,7 @@ impl Database {
 
         let users = rows
             .into_iter()
-            .map(|row| crate::User {
+            .map(|row| crate::auth::User {
                 id: row.get("id"),
                 username: row.get("username"),
                 password_hash: row.get("password_hash"),
@@ -177,7 +177,7 @@ impl Database {
         &self,
         username: &str,
         password: &str,
-    ) -> Result<Option<crate::User>, DynError> {
+    ) -> Result<Option<crate::auth::User>, DynError> {
         let user_row = sqlx::query(
             "SELECT id, username, password_hash, created_at FROM users WHERE username = ?",
         )
@@ -189,7 +189,7 @@ impl Database {
             let stored_hash: String = row.get("password_hash");
 
             if self.verify_password(password, &stored_hash)? {
-                let user = crate::User {
+                let user = crate::auth::User {
                     id: row.get("id"),
                     username: row.get("username"),
                     password_hash: stored_hash,
@@ -243,7 +243,10 @@ impl Database {
         Ok(token)
     }
 
-    pub async fn validate_session(&self, token: &str) -> Result<Option<crate::User>, DynError> {
+    pub async fn validate_session(
+        &self,
+        token: &str,
+    ) -> Result<Option<crate::auth::User>, DynError> {
         let session_row = sqlx::query(
             "SELECT s.user_id, u.username, u.password_hash, u.created_at
              FROM sessions s
@@ -255,7 +258,7 @@ impl Database {
         .await?;
 
         if let Some(row) = session_row {
-            let user = crate::User {
+            let user = crate::auth::User {
                 id: row.get("user_id"),
                 username: row.get("username"),
                 password_hash: row.get("password_hash"),
@@ -359,7 +362,7 @@ impl Database {
         }
     }
 
-    pub async fn get_all_books(&self) -> Result<Vec<crate::Book>, sqlx::Error> {
+    pub async fn get_all_books(&self) -> Result<Vec<crate::books::Book>, sqlx::Error> {
         let rows = sqlx::query(
             "SELECT id, title, author, isbn, publication_year, filepath, created_at FROM books ORDER BY created_at DESC",
         )
@@ -368,7 +371,7 @@ impl Database {
 
         let books = rows
             .into_iter()
-            .map(|row| crate::Book {
+            .map(|row| crate::books::Book {
                 id: row.get("id"),
                 title: row.get("title"),
                 author: row.get("author"),
@@ -382,7 +385,10 @@ impl Database {
         Ok(books)
     }
 
-    pub async fn get_book_by_id(&self, book_id: &str) -> Result<Option<crate::Book>, sqlx::Error> {
+    pub async fn get_book_by_id(
+        &self,
+        book_id: &str,
+    ) -> Result<Option<crate::books::Book>, sqlx::Error> {
         let row = sqlx::query(
             "SELECT id, title, author, isbn, publication_year, filepath, created_at FROM books WHERE id = ?",
         )
@@ -390,7 +396,7 @@ impl Database {
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(row.map(|row| crate::Book {
+        Ok(row.map(|row| crate::books::Book {
             id: row.get("id"),
             title: row.get("title"),
             author: row.get("author"),
