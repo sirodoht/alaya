@@ -75,7 +75,6 @@ impl GptClient {
             Return the information as JSON with these fields:\n\
             - title: the correct full title\n\
             - author: the correct author name\n\
-            - isbn: the ISBN-13 if known, otherwise null\n\
             - publication_year: the original publication year if known, otherwise null\n\n\
             Return ONLY valid JSON, no other text."
         );
@@ -181,7 +180,6 @@ pub enum GptError {
 pub struct BookMetadata {
     pub title: String,
     pub author: Option<String>,
-    pub isbn: Option<String>,
     pub publication_year: Option<i32>,
 }
 

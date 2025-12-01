@@ -332,7 +332,7 @@ pub async fn quick_add_submit(
         .create_book(
             &metadata.title,
             metadata.author.as_deref(),
-            metadata.isbn.as_deref(),
+            None,
             metadata.publication_year,
             None,
         )
