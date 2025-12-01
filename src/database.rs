@@ -407,4 +407,12 @@ impl Database {
             .await?;
         Ok(row.get("count"))
     }
+
+    pub async fn delete_book(&self, book_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM books WHERE id = ?")
+            .bind(book_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }

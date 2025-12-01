@@ -362,6 +362,26 @@ pub async fn book_detail(
     }
 }
 
+pub async fn book_delete(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    match db.delete_book(&book_id).await {
+        Ok(_) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error deleting book: {error}");
+            (StatusCode::INTERNAL_SERVER_ERROR, "Could not delete book").into_response()
+        }
+    }
+}
+
 pub async fn book_download(State(db): State<AppState>, Path(book_id): Path<String>) -> Response {
     let book = match db.get_book_by_id(&book_id).await {
         Ok(Some(book)) => book,
@@ -518,6 +538,7 @@ pub fn create_app(db: AppState) -> Router {
         .route("/profile", get(profile_page))
         .route("/books/new", get(book_form_page).post(book_create))
         .route("/books/{id}", get(book_detail))
+        .route("/books/{id}/delete", post(book_delete))
         .route("/books/{id}/download", get(book_download))
         .with_state(db)
 }
