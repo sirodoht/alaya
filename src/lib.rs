@@ -20,6 +20,7 @@ pub type AppState = Arc<Database>;
 #[template(path = "book_list.html")]
 pub struct BookListTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub books: Vec<Book>,
 }
@@ -28,6 +29,7 @@ pub struct BookListTemplate {
 #[template(path = "login.html")]
 pub struct LoginTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub form_username: String,
     pub error_message: Option<String>,
@@ -37,6 +39,7 @@ pub struct LoginTemplate {
 #[template(path = "signup.html")]
 pub struct SignupTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub form_username: String,
     pub error_message: Option<String>,
@@ -46,6 +49,7 @@ pub struct SignupTemplate {
 #[template(path = "book_form.html")]
 pub struct BookFormTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub error_message: Option<String>,
 }
@@ -54,6 +58,7 @@ pub struct BookFormTemplate {
 #[template(path = "book_detail.html")]
 pub struct BookDetailTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub book: Book,
 }
@@ -62,6 +67,7 @@ pub struct BookDetailTemplate {
 #[template(path = "profile.html")]
 pub struct ProfileTemplate {
     pub is_authenticated: bool,
+    pub signups_disabled: bool,
     pub username: String,
     pub book_count: i64,
 }
@@ -111,6 +117,7 @@ pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl I
 
     let template = BookListTemplate {
         is_authenticated: user.is_some(),
+        signups_disabled: signups_disabled(),
         username: user.map(|u| u.username).unwrap_or_default(),
         books,
     };
@@ -271,6 +278,7 @@ pub async fn book_form_page(State(db): State<AppState>, headers: HeaderMap) -> R
 
     let template = BookFormTemplate {
         is_authenticated: true,
+        signups_disabled: signups_disabled(),
         username: user.map(|u| u.username).unwrap_or_default(),
         error_message: None,
     };
@@ -293,6 +301,7 @@ pub async fn book_create(
     if title.is_empty() {
         let template = BookFormTemplate {
             is_authenticated: true,
+            signups_disabled: signups_disabled(),
             username: user.username,
             error_message: Some("Title is required".to_string()),
         };
@@ -319,6 +328,7 @@ pub async fn book_create(
             eprintln!("Book creation error: {error}");
             let template = BookFormTemplate {
                 is_authenticated: true,
+                signups_disabled: signups_disabled(),
                 username: user.username,
                 error_message: Some("Could not create book. Please try again.".to_string()),
             };
@@ -338,6 +348,7 @@ pub async fn book_detail(
         Ok(Some(book)) => {
             let template = BookDetailTemplate {
                 is_authenticated: user.is_some(),
+                signups_disabled: signups_disabled(),
                 username: user.map(|u| u.username).unwrap_or_default(),
                 book,
             };
@@ -422,6 +433,7 @@ pub async fn profile_page(State(db): State<AppState>, headers: HeaderMap) -> Res
 
     let template = ProfileTemplate {
         is_authenticated: true,
+        signups_disabled: signups_disabled(),
         username: user.map(|u| u.username).unwrap_or_default(),
         book_count,
     };
@@ -432,6 +444,7 @@ pub async fn profile_page(State(db): State<AppState>, headers: HeaderMap) -> Res
 fn render_login(form_username: String, error_message: Option<String>) -> Response {
     let template = LoginTemplate {
         is_authenticated: false,
+        signups_disabled: signups_disabled(),
         username: String::new(),
         form_username,
         error_message,
@@ -443,6 +456,7 @@ fn render_login(form_username: String, error_message: Option<String>) -> Respons
 fn render_signup(form_username: String, error_message: Option<String>) -> Response {
     let template = SignupTemplate {
         is_authenticated: false,
+        signups_disabled: signups_disabled(),
         username: String::new(),
         form_username,
         error_message,

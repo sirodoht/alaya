@@ -22,7 +22,9 @@
                 </form>
                 {% else %}
                 <a href="/login">login</a>
+                {% if !signups_disabled %}
                 <a href="/signup">sign up</a>
+                {% endif %}
                 {% endif %}
             </div>
         </nav>
