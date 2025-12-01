@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::{env, error::Error, fmt};
 
 const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
-const DEFAULT_MODEL: &str = "gpt-5.1-mini";
+const DEFAULT_MODEL: &str = "gpt-5-nano";
+const USER_AGENT: &str = "alayascan/0.1.0";
 
 #[derive(Clone, Debug, Default)]
 pub struct GptConfig {
@@ -30,7 +31,7 @@ pub struct GptClient {
 impl GptClient {
     pub fn new(config: GptConfig) -> Self {
         let http = Client::builder()
-            .user_agent("alaya-scan-cli/0.1.0")
+            .user_agent(USER_AGENT)
             .build()
             .expect("failed to build reqwest client");
 
@@ -53,7 +54,6 @@ impl GptClient {
                 ChatMessage::system("You are a helpful literary assistant."),
                 ChatMessage::user(prompt),
             ],
-            temperature: Some(0.2),
         };
 
         let response = self.send_chat(request).await?;
@@ -62,7 +62,7 @@ impl GptClient {
             .into_iter()
             .map(|choice| choice.message.content)
             .find(|content| !content.trim().is_empty())
-            .ok_or_else(|| GptError::UnexpectedResponse("Empty response from GPT-5".into()))
+            .ok_or_else(|| GptError::UnexpectedResponse("Empty response from GPT-5-mini".into()))
     }
 
     pub async fn send_chat(
@@ -152,8 +152,6 @@ impl ChatMessage {
 pub struct ChatCompletionRequest {
     pub model: String,
     pub messages: Vec<ChatMessage>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f32>,
 }
 
 #[derive(Debug, Deserialize)]

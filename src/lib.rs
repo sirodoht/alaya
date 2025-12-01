@@ -77,13 +77,14 @@ pub struct User {
 }
 
 // Book-related structures
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow, Serialize, Clone)]
 pub struct Book {
     pub id: String,
     pub title: String,
     pub author: Option<String>,
     pub isbn: Option<String>,
     pub publication_year: Option<i32>,
+    pub filepath: Option<String>,
     pub created_at: String,
 }
 
