@@ -1,13 +1,12 @@
 {% extends "layout.html" %}
 
-{% block title %}add book{% endblock title %}
+{% block title %}edit {{ book.title }}{% endblock title %}
 
 {% block content %}
 <section>
     <div class="page-row">
         <div class="page-header">
-            <h1>add a book</h1>
-            <p>add a new book to your collection</p>
+            <h1>edit book</h1>
         </div>
     </div>
 
@@ -17,40 +16,35 @@
     </div>
     {% endif %}
 
-    <form method="post" action="/books/new">
+    <form method="post" action="/books/{{ book.id }}/edit">
         <div class="page-row">
             <div class="page-content">
                 <label for="title">title</label>
-                <input type="text" id="title" name="title" required>
+                <input type="text" id="title" name="title" value="{{ book.title }}" required>
             </div>
         </div>
         <div class="page-row">
             <div class="page-content">
                 <label for="author">author</label>
-                <input type="text" id="author" name="author">
+                <input type="text" id="author" name="author" value="{{ book.author.as_deref().unwrap_or_default() }}">
             </div>
         </div>
         <div class="page-row">
             <div class="page-content">
                 <label for="isbn">isbn</label>
-                <input type="text" id="isbn" name="isbn">
+                <input type="text" id="isbn" name="isbn" value="{{ book.isbn.as_deref().unwrap_or_default() }}">
             </div>
         </div>
         <div class="page-row">
             <div class="page-content">
                 <label for="publication_year">pub year</label>
-                <input type="number" id="publication_year" name="publication_year" min="1000" max="2100">
-            </div>
-        </div>
-        <div class="page-row">
-            <div class="page-content">
-                <label for="notes">notes</label>
-                <textarea id="notes" name="notes" rows="4"></textarea>
+                <input type="number" id="publication_year" name="publication_year" min="1000" max="2100" value="{% if let Some(year) = book.publication_year %}{{ year }}{% endif %}">
             </div>
         </div>
         <div class="page-row">
             <div class="page-content page-actions">
-                <button type="submit">add book</button>
+                <a href="/books/{{ book.id }}" class="btn">cancel</a>
+                <button type="submit">save</button>
             </div>
         </div>
     </form>

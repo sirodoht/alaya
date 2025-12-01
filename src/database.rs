@@ -286,18 +286,20 @@ impl Database {
         author: Option<&str>,
         isbn: Option<&str>,
         publication_year: Option<i32>,
+        notes: Option<&str>,
     ) -> Result<String, DynError> {
         let book_id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO books (id, title, author, isbn, publication_year, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO books (id, title, author, isbn, publication_year, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(&book_id)
         .bind(title)
         .bind(author)
         .bind(isbn)
         .bind(publication_year)
+        .bind(notes)
         .bind(&now)
         .bind(&now)
         .execute(&self.pool)
@@ -364,7 +366,7 @@ impl Database {
 
     pub async fn get_all_books(&self) -> Result<Vec<crate::books::Book>, sqlx::Error> {
         let rows = sqlx::query(
-            "SELECT id, title, author, isbn, publication_year, filepath, created_at FROM books ORDER BY created_at DESC",
+            "SELECT id, title, author, isbn, publication_year, filepath, notes, created_at FROM books ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -378,6 +380,7 @@ impl Database {
                 isbn: row.get("isbn"),
                 publication_year: row.get("publication_year"),
                 filepath: row.get("filepath"),
+                notes: row.get("notes"),
                 created_at: row.get("created_at"),
             })
             .collect();
@@ -390,7 +393,7 @@ impl Database {
         book_id: &str,
     ) -> Result<Option<crate::books::Book>, sqlx::Error> {
         let row = sqlx::query(
-            "SELECT id, title, author, isbn, publication_year, filepath, created_at FROM books WHERE id = ?",
+            "SELECT id, title, author, isbn, publication_year, filepath, notes, created_at FROM books WHERE id = ?",
         )
         .bind(book_id)
         .fetch_optional(&self.pool)
@@ -403,6 +406,7 @@ impl Database {
             isbn: row.get("isbn"),
             publication_year: row.get("publication_year"),
             filepath: row.get("filepath"),
+            notes: row.get("notes"),
             created_at: row.get("created_at"),
         }))
     }
@@ -416,6 +420,44 @@ impl Database {
 
     pub async fn delete_book(&self, book_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query("DELETE FROM books WHERE id = ?")
+            .bind(book_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn update_book(
+        &self,
+        book_id: &str,
+        title: &str,
+        author: Option<&str>,
+        isbn: Option<&str>,
+        publication_year: Option<i32>,
+    ) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query(
+            "UPDATE books SET title = ?, author = ?, isbn = ?, publication_year = ?, updated_at = ? WHERE id = ?",
+        )
+        .bind(title)
+        .bind(author)
+        .bind(isbn)
+        .bind(publication_year)
+        .bind(&now)
+        .bind(book_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update_book_notes(
+        &self,
+        book_id: &str,
+        notes: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query("UPDATE books SET notes = ?, updated_at = ? WHERE id = ?")
+            .bind(notes)
+            .bind(&now)
             .bind(book_id)
             .execute(&self.pool)
             .await?;

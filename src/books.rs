@@ -10,7 +10,10 @@ use std::env;
 use crate::AppState;
 use crate::auth::{current_user, signups_disabled};
 use crate::gpt::{GptClient, GptConfig};
-use crate::templates::{BookDetailTemplate, BookFormTemplate, BookListTemplate, QuickAddTemplate};
+use crate::templates::{
+    BookDetailTemplate, BookEditNotesTemplate, BookEditTemplate, BookFormTemplate,
+    BookListTemplate, QuickAddTemplate,
+};
 
 // Book-related structures
 #[derive(sqlx::FromRow, Serialize, Clone)]
@@ -21,6 +24,7 @@ pub struct Book {
     pub isbn: Option<String>,
     pub publication_year: Option<i32>,
     pub filepath: Option<String>,
+    pub notes: Option<String>,
     pub created_at: String,
 }
 
@@ -39,12 +43,26 @@ pub struct CreateBookForm {
     pub author: String,
     pub isbn: String,
     pub publication_year: String,
+    pub notes: String,
 }
 
 #[derive(Deserialize)]
 pub struct QuickAddForm {
     pub query: String,
     pub model: String,
+}
+
+#[derive(Deserialize)]
+pub struct EditBookForm {
+    pub title: String,
+    pub author: String,
+    pub isbn: String,
+    pub publication_year: String,
+}
+
+#[derive(Deserialize)]
+pub struct EditNotesForm {
+    pub notes: String,
 }
 
 pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
@@ -114,7 +132,16 @@ pub async fn book_create(
 
     let publication_year = form.publication_year.trim().parse::<i32>().ok();
 
-    match db.create_book(title, author, isbn, publication_year).await {
+    let notes = if form.notes.trim().is_empty() {
+        None
+    } else {
+        Some(form.notes.trim())
+    };
+
+    match db
+        .create_book(title, author, isbn, publication_year, notes)
+        .await
+    {
         Ok(_) => Redirect::to("/").into_response(),
         Err(error) => {
             eprintln!("Book creation error: {error}");
@@ -307,6 +334,7 @@ pub async fn quick_add_submit(
             metadata.author.as_deref(),
             metadata.isbn.as_deref(),
             metadata.publication_year,
+            None,
         )
         .await
     {
@@ -320,6 +348,156 @@ pub async fn quick_add_submit(
                 error_message: Some("Could not save book. Please try again.".to_string()),
             };
             Html(template.render().unwrap()).into_response()
+        }
+    }
+}
+
+pub async fn book_edit_page(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => {
+            let template = BookEditTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.map(|u| u.username).unwrap_or_default(),
+                book,
+                error_message: None,
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+        Ok(None) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            Redirect::to("/").into_response()
+        }
+    }
+}
+
+pub async fn book_edit_submit(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+    Form(form): Form<EditBookForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    let Some(user) = user else {
+        return Redirect::to("/login").into_response();
+    };
+
+    let title = form.title.trim();
+    if title.is_empty() {
+        if let Ok(Some(book)) = db.get_book_by_id(&book_id).await {
+            let template = BookEditTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                book,
+                error_message: Some("Title is required".to_string()),
+            };
+            return Html(template.render().unwrap()).into_response();
+        }
+        return Redirect::to("/").into_response();
+    }
+
+    let author = if form.author.trim().is_empty() {
+        None
+    } else {
+        Some(form.author.trim())
+    };
+
+    let isbn = if form.isbn.trim().is_empty() {
+        None
+    } else {
+        Some(form.isbn.trim())
+    };
+
+    let publication_year = form.publication_year.trim().parse::<i32>().ok();
+
+    match db
+        .update_book(&book_id, title, author, isbn, publication_year)
+        .await
+    {
+        Ok(_) => Redirect::to(&format!("/books/{}", book_id)).into_response(),
+        Err(error) => {
+            eprintln!("Book update error: {error}");
+            if let Ok(Some(book)) = db.get_book_by_id(&book_id).await {
+                let template = BookEditTemplate {
+                    is_authenticated: true,
+                    signups_disabled: signups_disabled(),
+                    username: user.username,
+                    book,
+                    error_message: Some("Could not update book. Please try again.".to_string()),
+                };
+                return Html(template.render().unwrap()).into_response();
+            }
+            Redirect::to("/").into_response()
+        }
+    }
+}
+
+pub async fn book_edit_notes_page(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => {
+            let template = BookEditNotesTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.map(|u| u.username).unwrap_or_default(),
+                book,
+                error_message: None,
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+        Ok(None) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            Redirect::to("/").into_response()
+        }
+    }
+}
+
+pub async fn book_edit_notes_submit(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+    Form(form): Form<EditNotesForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let notes = if form.notes.trim().is_empty() {
+        None
+    } else {
+        Some(form.notes.trim())
+    };
+
+    match db.update_book_notes(&book_id, notes).await {
+        Ok(_) => Redirect::to(&format!("/books/{}", book_id)).into_response(),
+        Err(error) => {
+            eprintln!("Notes update error: {error}");
+            Redirect::to(&format!("/books/{}", book_id)).into_response()
         }
     }
 }

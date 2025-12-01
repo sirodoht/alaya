@@ -200,14 +200,19 @@ textarea {
     border: 1px solid #dee2e6;
     border-radius: 4px;
     font-size: 14px;
-    width: 300px;
     font-family: inherit;
     resize: vertical;
+    max-width: 600px;
+    width: 100%;
 }
-
 textarea:focus {
     outline: none;
     border-color: #6c757d;
+}
+@media (max-width: 500px) {
+    textarea {
+        width: 100%;
+    }
 }
 
 select {
@@ -260,6 +265,15 @@ select:focus {
     font-size: 14px;
 }
 
+.books-list-item-notes-icon {
+    color: black;
+    font-family: monospace;
+    font-weight: bold;
+    margin-left: 6px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
 .books-list-item-isbn {
     font-family: monospace;
     color: #6c757d;
@@ -288,6 +302,22 @@ select:focus {
     color: #6c757d;
     font-size: 14px;
     margin: 0;
+}
+
+.page-noteslabel {
+    margin-right: 16px;
+}
+@media (max-width: 500px) {
+    .page-noteslabel {
+        display: none;
+    }
+}
+
+.page-notes {
+    white-space: pre-wrap;
+    text-align: left;
+    max-width: 600px;
+    line-height: 1.2;
 }
 
 .books-detail-info {

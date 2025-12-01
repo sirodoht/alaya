@@ -27,6 +27,9 @@
                         {% else %}
                             {{ book.title }}
                         {% endif %}
+                        {% if book.notes.is_some() %}
+                        <span class="books-list-item-notes-icon" title="has notes">*</span>
+                        {% endif %}
                     </span>
                     {% if let Some(author) = book.author %}
                     <span class="books-list-item-author">{{ author }}</span>

@@ -154,6 +154,17 @@ impl GptClient {
         }
 
         let payload = response.bytes().await.map_err(GptError::Http)?;
+
+        match std::str::from_utf8(&payload) {
+            Ok(raw) => {
+                println!("OpenAI API Raw Response:");
+                println!("{}", raw);
+            }
+            Err(_) => {
+                println!("OpenAI API Raw Response: [could not decode response as UTF-8]");
+            }
+        }
+
         serde_json::from_slice(&payload).map_err(GptError::Json)
     }
 }
