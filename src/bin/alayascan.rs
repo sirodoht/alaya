@@ -105,88 +105,87 @@ async fn scan_directory(
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
         let file_path = entry.path();
 
-        if file_path.is_file() {
-            if let Some(ext) = file_path.extension() {
-                if let Some(ext_str) = ext.to_str() {
-                    let ext_lower = ext_str.to_lowercase();
-                    if BOOK_EXTENSIONS.contains(&ext_lower.as_str()) {
-                        println!("{}", file_path.display());
+        if file_path.is_file()
+            && let Some(ext) = file_path.extension()
+            && let Some(ext_str) = ext.to_str()
+        {
+            let ext_lower = ext_str.to_lowercase();
+            if BOOK_EXTENSIONS.contains(&ext_lower.as_str()) {
+                println!("{}", file_path.display());
 
-                        // Calculate relative path from the base directory
-                        let relative_path = file_path
-                            .canonicalize()
-                            .ok()
-                            .and_then(|p| p.strip_prefix(&base_path).ok().map(|r| r.to_path_buf()))
-                            .unwrap_or_else(|| file_path.to_path_buf());
-                        let relative_path_str = relative_path.to_string_lossy().to_string();
+                // Calculate relative path from the base directory
+                let relative_path = file_path
+                    .canonicalize()
+                    .ok()
+                    .and_then(|p| p.strip_prefix(&base_path).ok().map(|r| r.to_path_buf()))
+                    .unwrap_or_else(|| file_path.to_path_buf());
+                let relative_path_str = relative_path.to_string_lossy().to_string();
 
-                        // Extract metadata based on file type
-                        let book_data = if ext_lower == "epub" {
-                            extract_epub_metadata(file_path).map(|m| {
-                                print_epub_metadata(&m);
-                                BookData {
-                                    title: m.title,
-                                    author: m.author,
-                                    isbn: m.isbn,
-                                    publication_year: parse_year(&m.date),
-                                    filepath: relative_path_str.clone(),
-                                }
-                            })
-                        } else if ext_lower == "pdf" {
-                            extract_pdf_metadata(file_path).map(|m| {
-                                print_pdf_metadata(&m);
-                                BookData {
-                                    title: m.title,
-                                    author: m.author,
-                                    isbn: None,
-                                    publication_year: parse_year(&m.creation_date),
-                                    filepath: relative_path_str.clone(),
-                                }
-                            })
-                        } else {
-                            // For other formats, use filename as title
-                            Some(BookData {
-                                title: file_path
-                                    .file_stem()
-                                    .and_then(|s| s.to_str())
-                                    .map(String::from),
-                                author: None,
-                                isbn: None,
-                                publication_year: None,
-                                filepath: relative_path_str.clone(),
-                            })
-                        };
+                // Extract metadata based on file type
+                let book_data = if ext_lower == "epub" {
+                    extract_epub_metadata(file_path).map(|m| {
+                        print_epub_metadata(&m);
+                        BookData {
+                            title: m.title,
+                            author: m.author,
+                            isbn: m.isbn,
+                            publication_year: parse_year(&m.date),
+                            filepath: relative_path_str.clone(),
+                        }
+                    })
+                } else if ext_lower == "pdf" {
+                    extract_pdf_metadata(file_path).map(|m| {
+                        print_pdf_metadata(&m);
+                        BookData {
+                            title: m.title,
+                            author: m.author,
+                            isbn: None,
+                            publication_year: parse_year(&m.creation_date),
+                            filepath: relative_path_str.clone(),
+                        }
+                    })
+                } else {
+                    // For other formats, use filename as title
+                    Some(BookData {
+                        title: file_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .map(String::from),
+                        author: None,
+                        isbn: None,
+                        publication_year: None,
+                        filepath: relative_path_str.clone(),
+                    })
+                };
 
-                        // Save to database if requested
-                        if let (Some(db), Some(data)) = (&db, book_data) {
-                            if let Some(title) = &data.title {
-                                match db
-                                    .upsert_book_by_filepath(
-                                        &data.filepath,
-                                        title,
-                                        data.author.as_deref(),
-                                        data.isbn.as_deref(),
-                                        data.publication_year,
-                                    )
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        println!("  [SAVED]");
-                                        saved_count += 1;
-                                    }
-                                    Err(e) => {
-                                        eprintln!("  [ERROR saving: {}]", e);
-                                    }
-                                }
-                            } else {
-                                println!("  [SKIPPED: no title]");
+                // Save to database if requested
+                if let (Some(db), Some(data)) = (&db, book_data) {
+                    if let Some(title) = &data.title {
+                        match db
+                            .upsert_book_by_filepath(
+                                &data.filepath,
+                                title,
+                                data.author.as_deref(),
+                                data.isbn.as_deref(),
+                                data.publication_year,
+                            )
+                            .await
+                        {
+                            Ok(_) => {
+                                println!("  [SAVED]");
+                                saved_count += 1;
+                            }
+                            Err(e) => {
+                                eprintln!("  [ERROR saving: {}]", e);
                             }
                         }
-
-                        count += 1;
-                        println!();
+                    } else {
+                        println!("  [SKIPPED: no title]");
                     }
                 }
+
+                count += 1;
+                println!();
             }
         }
     }
@@ -218,20 +217,20 @@ fn parse_year(date: &Option<String>) -> Option<i32> {
     // Try to extract a 4-digit year from the beginning
     if chars.len() >= 4 {
         let first_four: String = chars[..4].iter().collect();
-        if let Ok(year) = first_four.parse::<i32>() {
-            if (1000..=2100).contains(&year) {
-                return Some(year);
-            }
+        if let Ok(year) = first_four.parse::<i32>()
+            && (1000..=2100).contains(&year)
+        {
+            return Some(year);
         }
     }
 
     // Try to find any 4-digit year in the string
     for i in 0..chars.len().saturating_sub(3) {
         let four_chars: String = chars[i..i + 4].iter().collect();
-        if let Ok(year) = four_chars.parse::<i32>() {
-            if (1800..=2100).contains(&year) {
-                return Some(year);
-            }
+        if let Ok(year) = four_chars.parse::<i32>()
+            && (1800..=2100).contains(&year)
+        {
+            return Some(year);
         }
     }
 
@@ -409,35 +408,35 @@ fn is_printable_text(s: &str) -> bool {
 }
 
 fn print_pdf_metadata(metadata: &PdfMetadata) {
-    if let Some(title) = &metadata.title {
-        if is_printable_text(title) {
-            println!("  Title: {}", title);
-        }
+    if let Some(title) = &metadata.title
+        && is_printable_text(title)
+    {
+        println!("  Title: {}", title);
     }
-    if let Some(author) = &metadata.author {
-        if is_printable_text(author) {
-            println!("  Author: {}", author);
-        }
+    if let Some(author) = &metadata.author
+        && is_printable_text(author)
+    {
+        println!("  Author: {}", author);
     }
-    if let Some(subject) = &metadata.subject {
-        if is_printable_text(subject) {
-            println!("  Subject: {}", subject);
-        }
+    if let Some(subject) = &metadata.subject
+        && is_printable_text(subject)
+    {
+        println!("  Subject: {}", subject);
     }
-    if let Some(creator) = &metadata.creator {
-        if is_printable_text(creator) {
-            println!("  Creator: {}", creator);
-        }
+    if let Some(creator) = &metadata.creator
+        && is_printable_text(creator)
+    {
+        println!("  Creator: {}", creator);
     }
-    if let Some(producer) = &metadata.producer {
-        if is_printable_text(producer) {
-            println!("  Producer: {}", producer);
-        }
+    if let Some(producer) = &metadata.producer
+        && is_printable_text(producer)
+    {
+        println!("  Producer: {}", producer);
     }
-    if let Some(date) = &metadata.creation_date {
-        if is_printable_text(date) {
-            println!("  Created: {}", date);
-        }
+    if let Some(date) = &metadata.creation_date
+        && is_printable_text(date)
+    {
+        println!("  Created: {}", date);
     }
 }
 
