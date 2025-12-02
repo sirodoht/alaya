@@ -117,13 +117,11 @@ impl GptClient {
         &self,
         current_title: &str,
         current_author: Option<&str>,
-        current_isbn: Option<&str>,
         current_publication_year: Option<i32>,
         instruction: &str,
         model: &str,
     ) -> Result<BookEditResult, GptError> {
         let author_str = current_author.unwrap_or("unknown");
-        let isbn_str = current_isbn.unwrap_or("none");
         let year_str = current_publication_year
             .map(|y| y.to_string())
             .unwrap_or_else(|| "unknown".to_string());
@@ -132,14 +130,12 @@ impl GptClient {
             "I have a book with these current details:\n\
             - Title: {current_title}\n\
             - Author: {author_str}\n\
-            - ISBN: {isbn_str}\n\
             - Publication Year: {year_str}\n\n\
             User instruction: \"{instruction}\"\n\n\
             Apply the user's instruction to update the book details. \
             Return the updated information as JSON with these fields:\n\
             - title: the updated title (or keep original if not changing)\n\
             - author: the author name (if multiple authors, separate with commas; or null if unknown)\n\
-            - isbn: the updated ISBN (or null if unknown/not applicable)\n\
             - publication_year: the updated publication year as a number (or null if unknown)\n\n\
             Return ONLY valid JSON, no other text."
         );
@@ -254,7 +250,6 @@ pub struct BookMetadata {
 pub struct BookEditResult {
     pub title: String,
     pub author: Option<String>,
-    pub isbn: Option<String>,
     pub publication_year: Option<i32>,
 }
 

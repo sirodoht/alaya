@@ -21,7 +21,6 @@ pub struct Book {
     pub id: String,
     pub title: String,
     pub author: Option<String>,
-    pub isbn: Option<String>,
     pub publication_year: Option<i32>,
     pub filepath: Option<String>,
     pub notes: Option<String>,
@@ -41,7 +40,6 @@ impl Book {
 pub struct CreateBookForm {
     pub title: String,
     pub author: String,
-    pub isbn: String,
     pub publication_year: String,
     pub notes: String,
 }
@@ -56,7 +54,6 @@ pub struct QuickAddForm {
 pub struct EditBookForm {
     pub title: String,
     pub author: String,
-    pub isbn: String,
     pub publication_year: String,
 }
 
@@ -75,7 +72,6 @@ pub struct EditChatForm {
 pub struct EditChatApplyForm {
     pub title: String,
     pub author: String,
-    pub isbn: String,
     pub publication_year: String,
 }
 
@@ -138,12 +134,6 @@ pub async fn book_create(
         Some(form.author.trim())
     };
 
-    let isbn = if form.isbn.trim().is_empty() {
-        None
-    } else {
-        Some(form.isbn.trim())
-    };
-
     let publication_year = form.publication_year.trim().parse::<i32>().ok();
 
     let notes = if form.notes.trim().is_empty() {
@@ -152,10 +142,7 @@ pub async fn book_create(
         Some(form.notes.trim())
     };
 
-    match db
-        .create_book(title, author, isbn, publication_year, notes)
-        .await
-    {
+    match db.create_book(title, author, publication_year, notes).await {
         Ok(_) => Redirect::to("/").into_response(),
         Err(error) => {
             eprintln!("Book creation error: {error}");
@@ -346,7 +333,6 @@ pub async fn quick_add_submit(
         .create_book(
             &metadata.title,
             metadata.author.as_deref(),
-            None,
             metadata.publication_year,
             None,
         )
@@ -429,16 +415,10 @@ pub async fn book_edit_submit(
         Some(form.author.trim())
     };
 
-    let isbn = if form.isbn.trim().is_empty() {
-        None
-    } else {
-        Some(form.isbn.trim())
-    };
-
     let publication_year = form.publication_year.trim().parse::<i32>().ok();
 
     match db
-        .update_book(&book_id, title, author, isbn, publication_year)
+        .update_book(&book_id, title, author, publication_year)
         .await
     {
         Ok(_) => Redirect::to(&format!("/books/{}", book_id)).into_response(),
@@ -600,7 +580,6 @@ pub async fn book_edit_chat_submit(
         .edit_book_with_instruction(
             &book.title,
             book.author.as_deref(),
-            book.isbn.as_deref(),
             book.publication_year,
             instruction,
             &form.model,
@@ -656,16 +635,10 @@ pub async fn book_edit_chat_apply(
         Some(form.author.trim())
     };
 
-    let isbn = if form.isbn.trim().is_empty() {
-        None
-    } else {
-        Some(form.isbn.trim())
-    };
-
     let publication_year = form.publication_year.trim().parse::<i32>().ok();
 
     match db
-        .update_book(&book_id, title, author, isbn, publication_year)
+        .update_book(&book_id, title, author, publication_year)
         .await
     {
         Ok(_) => Redirect::to(&format!("/books/{}", book_id)).into_response(),

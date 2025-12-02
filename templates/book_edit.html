@@ -31,12 +31,6 @@
         </div>
         <div class="page-row">
             <div class="page-content">
-                <label for="isbn">isbn</label>
-                <input type="text" id="isbn" name="isbn" value="{{ book.isbn.as_deref().unwrap_or_default() }}">
-            </div>
-        </div>
-        <div class="page-row">
-            <div class="page-content">
                 <label for="publication_year">pub year</label>
                 <input type="number" id="publication_year" name="publication_year" min="1000" max="2100" value="{% if let Some(year) = book.publication_year %}{{ year }}{% endif %}">
             </div>

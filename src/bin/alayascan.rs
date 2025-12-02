@@ -128,7 +128,6 @@ async fn scan_directory(
                         BookData {
                             title: m.title,
                             author: m.author,
-                            isbn: m.isbn,
                             publication_year: parse_year(&m.date),
                             filepath: relative_path_str.clone(),
                         }
@@ -139,7 +138,6 @@ async fn scan_directory(
                         BookData {
                             title: m.title,
                             author: m.author,
-                            isbn: None,
                             publication_year: parse_year(&m.creation_date),
                             filepath: relative_path_str.clone(),
                         }
@@ -152,7 +150,6 @@ async fn scan_directory(
                             .and_then(|s| s.to_str())
                             .map(String::from),
                         author: None,
-                        isbn: None,
                         publication_year: None,
                         filepath: relative_path_str.clone(),
                     })
@@ -166,7 +163,6 @@ async fn scan_directory(
                                 &data.filepath,
                                 title,
                                 data.author.as_deref(),
-                                data.isbn.as_deref(),
                                 data.publication_year,
                             )
                             .await
@@ -202,7 +198,6 @@ async fn scan_directory(
 struct BookData {
     title: Option<String>,
     author: Option<String>,
-    isbn: Option<String>,
     publication_year: Option<i32>,
     filepath: String,
 }
@@ -244,17 +239,10 @@ struct EpubMetadata {
     date: Option<String>,
     language: Option<String>,
     description: Option<String>,
-    isbn: Option<String>,
 }
 
 fn extract_epub_metadata(path: &Path) -> Option<EpubMetadata> {
     let doc = EpubDoc::new(path).ok()?;
-
-    // Try to extract ISBN from identifier or source metadata
-    let isbn = doc
-        .mdata("identifier")
-        .and_then(|m| extract_isbn(&m.value))
-        .or_else(|| doc.mdata("source").and_then(|m| extract_isbn(&m.value)));
 
     Some(EpubMetadata {
         title: doc.mdata("title").map(|m| m.value.clone()),
@@ -263,32 +251,7 @@ fn extract_epub_metadata(path: &Path) -> Option<EpubMetadata> {
         date: doc.mdata("date").map(|m| m.value.clone()),
         language: doc.mdata("language").map(|m| m.value.clone()),
         description: doc.mdata("description").map(|m| m.value.clone()),
-        isbn,
     })
-}
-
-/// Extract ISBN from a string (ISBN-10 or ISBN-13)
-fn extract_isbn(s: &str) -> Option<String> {
-    // Remove common prefixes
-    let cleaned = s
-        .replace("urn:isbn:", "")
-        .replace("isbn:", "")
-        .replace("ISBN:", "")
-        .replace("ISBN ", "")
-        .replace("-", "")
-        .replace(" ", "");
-
-    // Check if it looks like an ISBN (10 or 13 digits, possibly with X at end)
-    let digits: String = cleaned
-        .chars()
-        .filter(|c| c.is_ascii_digit() || *c == 'X' || *c == 'x')
-        .collect();
-
-    if digits.len() == 10 || digits.len() == 13 {
-        Some(digits)
-    } else {
-        None
-    }
 }
 
 fn print_epub_metadata(metadata: &EpubMetadata) {
@@ -303,9 +266,6 @@ fn print_epub_metadata(metadata: &EpubMetadata) {
     }
     if let Some(date) = &metadata.date {
         println!("  Date: {}", date);
-    }
-    if let Some(isbn) = &metadata.isbn {
-        println!("  ISBN: {}", isbn);
     }
     if let Some(language) = &metadata.language {
         println!("  Language: {}", language);

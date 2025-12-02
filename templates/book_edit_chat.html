@@ -25,12 +25,6 @@
     </div>
     <div class="page-row">
         <div class="page-content">
-            <span class="page-label">ISBN</span>
-            <span class="page-value">{% if let Some(isbn) = book.isbn %}{{ isbn }}{% else %}not set{% endif %}</span>
-        </div>
-    </div>
-    <div class="page-row">
-        <div class="page-content">
             <span class="page-label">Year</span>
             <span class="page-value">{% if let Some(year) = book.publication_year %}{{ year }}{% else %}not set{% endif %}</span>
         </div>
@@ -62,12 +56,6 @@
     </div>
     <div class="page-row">
         <div class="page-content">
-            <span class="page-label">ISBN</span>
-            <span class="page-value {% if result.isbn != book.isbn %}page-value-changed{% endif %}">{% if let Some(isbn) = result.isbn %}{{ isbn }}{% else %}not set{% endif %}</span>
-        </div>
-    </div>
-    <div class="page-row">
-        <div class="page-content">
             <span class="page-label">Year</span>
             <span class="page-value {% if result.publication_year != book.publication_year %}page-value-changed{% endif %}">{% if let Some(year) = result.publication_year %}{{ year }}{% else %}not set{% endif %}</span>
         </div>
@@ -77,7 +65,6 @@
             <form method="post" action="/books/{{ book.id }}/edit-chat/apply">
                 <input type="hidden" name="title" value="{{ result.title }}">
                 <input type="hidden" name="author" value="{% if let Some(author) = result.author %}{{ author }}{% endif %}">
-                <input type="hidden" name="isbn" value="{% if let Some(isbn) = result.isbn %}{{ isbn }}{% endif %}">
                 <input type="hidden" name="publication_year" value="{% if let Some(year) = result.publication_year %}{{ year }}{% endif %}">
                 <button type="submit" class="btn">save</button>
             </form>

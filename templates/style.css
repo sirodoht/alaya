@@ -11,12 +11,12 @@ header {
 }
 
 nav {
-    max-width: 1200px;
+    max-width: 614px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 32px;
+    padding: 0 0 0 12px;
 }
 @media (max-width: 768px) {
     nav {
@@ -91,7 +91,7 @@ main {
 }
 
 .page-content {
-    max-width: 1200px;
+    max-width: 600px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -104,7 +104,7 @@ main {
 }
 
 .page-header {
-    max-width: 1200px;
+    max-width: 600px;
     margin: 0 auto;
 }
 
@@ -141,7 +141,7 @@ main {
 }
 
 .page-error {
-    max-width: 1200px;
+    max-width: 600px;
     margin: 0 auto;
     background-color: #f8d7da;
     color: #721c24;
@@ -149,7 +149,7 @@ main {
 }
 
 .page-success {
-    max-width: 1200px;
+    max-width: 600px;
     margin: 0 auto;
     background-color: #d4edda;
     color: #155724;
@@ -257,7 +257,7 @@ select:focus {
 }
 
 .books-list-item-link {
-    max-width: 1200px;
+    max-width: 600px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -292,16 +292,6 @@ select:focus {
     vertical-align: middle;
     position: relative;
     top: -2px;
-}
-
-.books-list-item-isbn {
-    font-family: monospace;
-    color: #6c757d;
-}
-@media (max-width: 768px) {
-    .books-list-item-isbn {
-        display: none;
-    }
 }
 
 .books-list-item-meta {

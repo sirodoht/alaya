@@ -35,9 +35,6 @@
                     <span class="books-list-item-author">{{ author }}</span>
                     {% endif %}
                 </div>
-                {% if let Some(isbn) = book.isbn %}
-                <div class="books-list-item-isbn">ISBN: {{ isbn }}</div>
-                {% endif %}
                 <div class="books-list-item-meta">
                     {% if let Some(year) = book.publication_year %}
                     <span class="books-list-item-year">{{ year }}</span>
