@@ -33,6 +33,24 @@
 
     <div class="page-row">
         <div class="page-content">
+            <span class="page-label">Amazon UK</span>
+            <span class="page-value">
+                <a href="https://www.amazon.co.uk/s?k={{ book.title|urlencode }}{% if let Some(author) = book.author %}+{{ author|urlencode }}{% endif %}" target="_blank">search amz →</a>
+            </span>
+        </div>
+    </div>
+
+    <div class="page-row">
+        <div class="page-content">
+            <span class="page-label">World of Books</span>
+            <span class="page-value">
+                <a href="https://www.worldofbooks.com/en-gb/search?q={{ book.title|urlencode }}{% if let Some(author) = book.author %}+{{ author|urlencode }}{% endif %}" target="_blank">search wob →</a>
+            </span>
+        </div>
+    </div>
+
+    <div class="page-row">
+        <div class="page-content">
             <span class="page-label">Added</span>
             <span class="page-value">{{ book.created_date() }}</span>
         </div>
@@ -56,7 +74,6 @@
     </div>
     {% endif %}
 
-    {% if is_authenticated || book.filepath.is_some() %}
     <div class="page-row">
         <div class="page-content page-actions">
             {% if is_authenticated %}
@@ -72,7 +89,6 @@
             {% endif %}
         </div>
     </div>
-    {% endif %}
 
 </section>
 {% endblock content %}

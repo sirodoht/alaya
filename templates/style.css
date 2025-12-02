@@ -135,6 +135,11 @@ main {
     border-radius: 4px;
 }
 
+.page-value a {
+    color: #6c757d;
+    text-decoration: none;
+}
+
 .page-error {
     max-width: 1200px;
     margin: 0 auto;
