@@ -1,6 +1,7 @@
 use askama::Template;
 
 use crate::books::Book;
+use crate::gpt::BookEditResult;
 
 #[derive(Template)]
 #[template(path = "book_list.html")]
@@ -95,4 +96,15 @@ pub struct ChangePasswordTemplate {
     pub username: String,
     pub error_message: Option<String>,
     pub success_message: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "book_edit_chat.html")]
+pub struct BookEditChatTemplate {
+    pub is_authenticated: bool,
+    pub signups_disabled: bool,
+    pub username: String,
+    pub book: Book,
+    pub error_message: Option<String>,
+    pub edit_result: Option<BookEditResult>,
 }

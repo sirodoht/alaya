@@ -73,7 +73,7 @@ impl GptClient {
         let prompt = format!(
             "Identify this book: \"{query}\"\n\n\
             Return the information as JSON with these fields:\n\
-            - title: the correct full title\n\
+            - title: the correct title (omit the subtitle if it exists)\n\
             - author: the correct author name\n\
             - publication_year: the original publication year if known, otherwise null\n\n\
             Return ONLY valid JSON, no other text."
@@ -109,6 +109,73 @@ impl GptClient {
         serde_json::from_str(json_str).map_err(|e| {
             GptError::UnexpectedResponse(format!(
                 "Failed to parse book metadata: {e}\nRaw: {content}"
+            ))
+        })
+    }
+
+    pub async fn edit_book_with_instruction(
+        &self,
+        current_title: &str,
+        current_author: Option<&str>,
+        current_isbn: Option<&str>,
+        current_publication_year: Option<i32>,
+        instruction: &str,
+        model: &str,
+    ) -> Result<BookEditResult, GptError> {
+        let author_str = current_author.unwrap_or("unknown");
+        let isbn_str = current_isbn.unwrap_or("none");
+        let year_str = current_publication_year
+            .map(|y| y.to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let prompt = format!(
+            "I have a book with these current details:\n\
+            - Title: {current_title}\n\
+            - Author: {author_str}\n\
+            - ISBN: {isbn_str}\n\
+            - Publication Year: {year_str}\n\n\
+            User instruction: \"{instruction}\"\n\n\
+            Apply the user's instruction to update the book details. \
+            Return the updated information as JSON with these fields:\n\
+            - title: the updated title (or keep original if not changing)\n\
+            - author: the updated author name (or null if unknown/not applicable)\n\
+            - isbn: the updated ISBN (or null if unknown/not applicable)\n\
+            - publication_year: the updated publication year as a number (or null if unknown)\n\n\
+            Return ONLY valid JSON, no other text."
+        );
+
+        let request = ChatCompletionRequest {
+            model: model.to_string(),
+            messages: vec![
+                ChatMessage::system(
+                    "You are a knowledgeable librarian assistant helping to update book records. \
+                    Follow the user's instructions precisely. For example, if they ask for a German title, \
+                    provide the German translation of the title. If they ask to fix spelling, correct it. \
+                    Always respond with valid JSON only, no markdown or extra text.",
+                ),
+                ChatMessage::user(prompt),
+            ],
+        };
+
+        let response = self.send_chat(request).await?;
+        let content = response
+            .choices
+            .into_iter()
+            .map(|choice| choice.message.content)
+            .find(|content| !content.trim().is_empty())
+            .ok_or_else(|| GptError::UnexpectedResponse("Empty response from GPT".into()))?;
+
+        // Parse JSON response, stripping any markdown code fences if present
+        let json_str = content
+            .trim()
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+
+        serde_json::from_str(json_str).map_err(|e| {
+            GptError::UnexpectedResponse(format!(
+                "Failed to parse book edit result: {e}\nRaw: {content}"
             ))
         })
     }
@@ -180,6 +247,14 @@ pub enum GptError {
 pub struct BookMetadata {
     pub title: String,
     pub author: Option<String>,
+    pub publication_year: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BookEditResult {
+    pub title: String,
+    pub author: Option<String>,
+    pub isbn: Option<String>,
     pub publication_year: Option<i32>,
 }
 

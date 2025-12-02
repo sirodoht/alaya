@@ -11,8 +11,8 @@ use crate::AppState;
 use crate::auth::{current_user, signups_disabled};
 use crate::gpt::{GptClient, GptConfig};
 use crate::templates::{
-    BookDetailTemplate, BookEditNotesTemplate, BookEditTemplate, BookFormTemplate,
-    BookListTemplate, QuickAddTemplate,
+    BookDetailTemplate, BookEditChatTemplate, BookEditNotesTemplate, BookEditTemplate,
+    BookFormTemplate, BookListTemplate, QuickAddTemplate,
 };
 
 // Book-related structures
@@ -63,6 +63,20 @@ pub struct EditBookForm {
 #[derive(Deserialize)]
 pub struct EditNotesForm {
     pub notes: String,
+}
+
+#[derive(Deserialize)]
+pub struct EditChatForm {
+    pub instruction: String,
+    pub model: String,
+}
+
+#[derive(Deserialize)]
+pub struct EditChatApplyForm {
+    pub title: String,
+    pub author: String,
+    pub isbn: String,
+    pub publication_year: String,
 }
 
 pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
@@ -498,6 +512,166 @@ pub async fn book_edit_notes_submit(
         Err(error) => {
             eprintln!("Notes update error: {error}");
             Redirect::to(&format!("/books/{}", book_id)).into_response()
+        }
+    }
+}
+
+pub async fn book_edit_chat_page(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => {
+            let template = BookEditChatTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.map(|u| u.username).unwrap_or_default(),
+                book,
+                error_message: None,
+                edit_result: None,
+            };
+            Html(template.render().unwrap()).into_response()
+        }
+        Ok(None) => Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            Redirect::to("/").into_response()
+        }
+    }
+}
+
+pub async fn book_edit_chat_submit(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+    Form(form): Form<EditChatForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    let Some(user) = user else {
+        return Redirect::to("/login").into_response();
+    };
+
+    let book = match db.get_book_by_id(&book_id).await {
+        Ok(Some(book)) => book,
+        Ok(None) => return Redirect::to("/").into_response(),
+        Err(error) => {
+            eprintln!("Error fetching book: {error}");
+            return Redirect::to("/").into_response();
+        }
+    };
+
+    let instruction = form.instruction.trim();
+    if instruction.is_empty() {
+        let template = BookEditChatTemplate {
+            is_authenticated: true,
+            signups_disabled: signups_disabled(),
+            username: user.username,
+            book,
+            error_message: Some("Please enter an instruction".to_string()),
+            edit_result: None,
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    // Create GPT client and process the instruction
+    let gpt = GptClient::new(GptConfig::from_env());
+
+    if !gpt.has_api_key() {
+        let template = BookEditChatTemplate {
+            is_authenticated: true,
+            signups_disabled: signups_disabled(),
+            username: user.username,
+            book,
+            error_message: Some("AI features not available (API key not configured)".to_string()),
+            edit_result: None,
+        };
+        return Html(template.render().unwrap()).into_response();
+    }
+
+    let edit_result = match gpt
+        .edit_book_with_instruction(
+            &book.title,
+            book.author.as_deref(),
+            book.isbn.as_deref(),
+            book.publication_year,
+            instruction,
+            &form.model,
+        )
+        .await
+    {
+        Ok(result) => result,
+        Err(error) => {
+            eprintln!("GPT error: {error}");
+            let template = BookEditChatTemplate {
+                is_authenticated: true,
+                signups_disabled: signups_disabled(),
+                username: user.username,
+                book,
+                error_message: Some(format!("AI error: {error}")),
+                edit_result: None,
+            };
+            return Html(template.render().unwrap()).into_response();
+        }
+    };
+
+    let template = BookEditChatTemplate {
+        is_authenticated: true,
+        signups_disabled: signups_disabled(),
+        username: user.username,
+        book,
+        error_message: None,
+        edit_result: Some(edit_result),
+    };
+    Html(template.render().unwrap()).into_response()
+}
+
+pub async fn book_edit_chat_apply(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    Path(book_id): Path<String>,
+    Form(form): Form<EditChatApplyForm>,
+) -> Response {
+    let user = current_user(&db, &headers).await;
+
+    if user.is_none() {
+        return Redirect::to("/login").into_response();
+    }
+
+    let title = form.title.trim();
+    if title.is_empty() {
+        return Redirect::to(&format!("/books/{}/edit-chat", book_id)).into_response();
+    }
+
+    let author = if form.author.trim().is_empty() {
+        None
+    } else {
+        Some(form.author.trim())
+    };
+
+    let isbn = if form.isbn.trim().is_empty() {
+        None
+    } else {
+        Some(form.isbn.trim())
+    };
+
+    let publication_year = form.publication_year.trim().parse::<i32>().ok();
+
+    match db
+        .update_book(&book_id, title, author, isbn, publication_year)
+        .await
+    {
+        Ok(_) => Redirect::to(&format!("/books/{}", book_id)).into_response(),
+        Err(error) => {
+            eprintln!("Book update error: {error}");
+            Redirect::to(&format!("/books/{}/edit-chat", book_id)).into_response()
         }
     }
 }

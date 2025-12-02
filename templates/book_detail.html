@@ -62,7 +62,8 @@
             {% if is_authenticated %}
             <a href="/books/{{ book.id }}/edit" class="btn">edit</a>
             <a href="/books/{{ book.id }}/edit-notes" class="btn">edit notes</a>
-            <form method="post" action="/books/{{ book.id }}/delete" onsubmit="return confirm('are you sure you want to delete this book?');">
+            <a href="/books/{{ book.id }}/edit-chat" class="btn">edit in chat</a>
+            <form method="post" action="/books/{{ book.id }}/delete" onsubmit="return confirm('sure?');">
                 <button type="submit" class="btn">delete</button>
             </form>
             {% endif %}
