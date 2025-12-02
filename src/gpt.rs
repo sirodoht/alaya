@@ -74,7 +74,7 @@ impl GptClient {
             "Identify this book: \"{query}\"\n\n\
             Return the information as JSON with these fields:\n\
             - title: the correct title (omit the subtitle if it exists)\n\
-            - author: the correct author name\n\
+            - author: the author name (if multiple authors, separate with commas)\n\
             - publication_year: the original publication year if known, otherwise null\n\n\
             Return ONLY valid JSON, no other text."
         );
@@ -138,7 +138,7 @@ impl GptClient {
             Apply the user's instruction to update the book details. \
             Return the updated information as JSON with these fields:\n\
             - title: the updated title (or keep original if not changing)\n\
-            - author: the updated author name (or null if unknown/not applicable)\n\
+            - author: the author name (if multiple authors, separate with commas; or null if unknown)\n\
             - isbn: the updated ISBN (or null if unknown/not applicable)\n\
             - publication_year: the updated publication year as a number (or null if unknown)\n\n\
             Return ONLY valid JSON, no other text."
