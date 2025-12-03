@@ -75,15 +75,35 @@ pub struct EditChatApplyForm {
     pub publication_year: String,
 }
 
-pub async fn book_list(State(db): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+#[derive(Deserialize)]
+pub struct BookListQuery {
+    pub notes: Option<String>,
+}
+
+pub async fn book_list(
+    State(db): State<AppState>,
+    headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<BookListQuery>,
+) -> impl IntoResponse {
     let user = current_user(&db, &headers).await;
-    let books = db.get_all_books().await.unwrap_or_default();
+    let all_books = db.get_all_books().await.unwrap_or_default();
+
+    let notes = query.notes.as_deref() == Some("true");
+    let books = if notes {
+        all_books
+            .into_iter()
+            .filter(|b| b.notes.is_some())
+            .collect()
+    } else {
+        all_books
+    };
 
     let template = BookListTemplate {
         is_authenticated: user.is_some(),
         signups_disabled: signups_disabled(),
         username: user.map(|u| u.username).unwrap_or_default(),
         books,
+        notes,
     };
 
     Html(template.render().unwrap())

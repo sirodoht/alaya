@@ -10,6 +10,7 @@ pub struct BookListTemplate {
     pub signups_disabled: bool,
     pub username: String,
     pub books: Vec<Book>,
+    pub notes: bool,
 }
 
 #[derive(Template)]

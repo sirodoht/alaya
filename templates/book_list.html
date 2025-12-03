@@ -4,6 +4,18 @@
 
 {% block content %}
 <section>
+    <div class="filters">
+        <div class="filters-content">
+            {% if notes %}
+            <a href="/" class="filters-link">all books</a>
+            <span class="filters-link filters-link-active">notes</span>
+            {% else %}
+            <span class="filters-link filters-link-active">all books</span>
+            <a href="/?notes=true" class="filters-link">notes</a>
+            {% endif %}
+        </div>
+    </div>
+
     {% if books.is_empty() %}
     <section>
         <div style="max-width: 1200px; margin: 0 auto;">
