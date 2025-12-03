@@ -338,7 +338,7 @@ pub async fn quick_add_submit(
         )
         .await
     {
-        Ok(_) => Redirect::to("/").into_response(),
+        Ok(book_id) => Redirect::to(&format!("/books/{}", book_id)).into_response(),
         Err(error) => {
             eprintln!("Book creation error: {error}");
             let template = QuickAddTemplate {
