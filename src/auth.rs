@@ -156,7 +156,7 @@ pub async fn logout(State(db): State<AppState>, headers: HeaderMap) -> Response 
         eprintln!("Failed to delete session: {error}");
     }
 
-    let mut response = Redirect::to("/login").into_response();
+    let mut response = Redirect::to("/").into_response();
     response
         .headers_mut()
         .insert(header::SET_COOKIE, clear_session_cookie());
